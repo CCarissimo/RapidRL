@@ -1,63 +1,8 @@
 import numpy as np
-from gym.core import Env
 import matplotlib.pyplot as plt
+from matplotlib.path import Path
+import matplotlib.patches as patches
 
-# Gridworld Environment class, takes grid as argument, most important method is step
-class gridworld(Env):
-    def __init__(self, grid, terminal_states, initial_state, agent, max_steps):
-        super().__init__()
-        self.actions = ['up', 'down', 'left', 'right']
-        self.actions_dict = {'up':np.array((-1,0)), 'down':np.array((1,0)), 'left':np.array((0,-1)), 'right':np.array((0,1))}
-        self.actions_map = {action:i for i, action in enumerate(self.actions)}
-        self.grid = grid
-        self.terminal_states = terminal_states
-        self.initial_state = initial_state
-        self.step_counter = 0
-        self.max_steps = max_steps
-        
-    def step(self, action):
-        
-        new_state = self.state + self.actions_dict[action]
-        
-        if new_state[0] < 0 or new_state[0] > 2:
-            new_state = self.state
-        elif new_state[1] < 0 or new_state[1] > 3:
-            new_state = self.state
-        elif new_state[0] == 0 and new_state[1] == 2:
-            new_state = self.state
-        
-        self.state = new_state
-        
-        reward = self.grid[self.state[0], self.state[1]]
-        
-        observation_ = self.state
-        
-        for square in self.terminal_states:
-            if (self.state == square).all():
-                self.terminal = True
-                
-        if self.step_counter == self.max_steps:
-            self.terminal = True
-        
-        self.step_counter += 1
-        
-        return self.state, reward, self.terminal
-    
-    def reset(self):
-        self.state = self.initial_state
-        self.terminal = False
-        self.step_counter = 0
-        return self.state
-
-# Agent class, currently only selects random actions
-class agent:
-    def __init__(self,):
-        self.actions = ['up', 'down', 'left', 'right']
-        self.n_actions = len(self.actions)
-        
-    def next_action(self, state):
-        next_action = self.actions[np.random.randint(self.n_actions)]
-        return next_action
 
 # For (s,a), find the cumulative discounted sum of rewards over a set of trajectories
 def Qpi_sa(state, action, trajectories, gamma, q_table):
@@ -65,79 +10,196 @@ def Qpi_sa(state, action, trajectories, gamma, q_table):
     for t in trajectories:
         store = False
         step_counter = 0
-        for s, a in t:
+        for s, a, _, _, _ in t:
             disc_ret = 0
             if (state == s).all() and action == a:
                 store = True
-                
+
             if store:
-                disc_ret += gamma**(step_counter) * q_table[str(s)][a]
+                disc_ret += gamma ** step_counter * q_table[str(s)][a]
                 step_counter += 1
-        
+
         if store:
             returns.append(disc_ret)
-        
+
     return np.mean(returns)
 
-# Create a dictionary indexed by state action strings with discounted 
-def return_table(trajectories, gamma, q_table):
+
+# For (s,a), find the cumulative discounted sum of novelties over a set of trajectories
+def Npi_sa(state, action, trajectories, gamma, visits):
+    returns = []
+    for t in trajectories:
+        store = False
+        step_counter = 0
+        for s, a, _, _, _ in t:
+            disc_ret = 0
+            if (state == s).all() and action == a:
+                store = True
+
+            if store:
+                disc_ret += gamma ** step_counter * visits[str(s)][a]
+                step_counter += 1
+
+        if store:
+            returns.append(disc_ret)
+
+    return np.mean(returns)
+
+
+# Create a dictionary indexed by state action strings with discounted
+def cumulative_table(trajectories, gamma, function_sa, table):
     returns_table = {}
     for t in trajectories:
-        for s, a in t:
-            key = str(s)+', '+a
-            if key in returns_table.keys():
-                continue
+        for s, a, _, _, _ in t:
+            state = str(s)
+
+            if state in returns_table.keys():
+                if a in returns_table[state].keys():
+                    continue
+                else:
+                    returns_table[state][a] = function_sa(s, a, trajectories, gamma, table)
             else:
-                returns_table[key] = Qpi_sa(s,a,trajectories,gamma,q_table)
-    
+                returns_table[state] = {a: function_sa(s, a, trajectories, gamma, table)}
+
     return returns_table
+
 
 # Calculate state visit distribution
 def state_dist(visits):
     total_visits = sum(visits[state] for state in visits.keys())
     rho = {}
     for s in visits.keys():
-        rho[s] = visits[s]/total_visits
+        rho[s] = visits[s] / total_visits
     return rho
 
+
 # Using the table of returns for (s,a) pairs, abstract over states to estimate generalized (a) values
-def Qpi_a(action, returns_table, rho):
+def Qpi_a(action, return_table, rho):
     abstraction = 0
-    for state, prob in rho.items():
-        key = state + ', ' + action
-        if key in returns_table.keys():
-            abstraction += prob * returns_table[key]
+    for state, actions in return_table.items():
+        if action in actions.keys():
+            abstraction += rho[state] * return_table[state][action]
     return abstraction
 
-class ReplayBuffer():
-    def __init__(self, max_size, input_shape, n_actions):
-        self.mem_size = max_size
-        self.mem_cntr = 0
-        self.state_memory = np.zeros((self.mem_size, *input_shape))
-        self.new_state_memory = np.zeros((self.mem_size, *input_shape))
-        self.action_memory = np.zeros((self.mem_size, n_actions))
-        self.reward_memory = np.zeros(self.mem_size)
-        self.terminal_memory = np.zeros(self.mem_size, dtype=np.bool)
 
-    def store_transition(self, state, action, reward, state_, done):
-        index = self.mem_cntr % self.mem_size
-        self.state_memory[index] = state
-        self.action_memory[index] = action
-        self.reward_memory[index] = reward
-        self.new_state_memory[index] = state_
-        self.terminal_memory[index] = done
+def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None, ax=None, show=True):
+    if fig is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = fig
+        ax = ax
 
-        self.mem_cntr += 1
+    cax = fig.add_axes([0.27, 0.75, 0.5, 0.05])
+    colormap = plt.get_cmap('RdYlGn')
+    im = ax.imshow(grid, cmap=colormap)
+    ax.set_xticks(np.arange(-.5, 8, 1), minor=True)
+    ax.set_yticks(np.arange(-.5, 3, 1), minor=True)
+    ax.grid(which='minor', color='w', linewidth=2)
+    cb = fig.colorbar(im, ax=ax, cax=cax, orientation='horizontal', label='reward')
+    cb.ax.xaxis.set_ticks_position('top')
+    cb.ax.xaxis.set_label_position('top')
+    cb.ax.tick_params(labelsize=10)
+    for i in range(len(grid[:, 0])):
+        for j in range(len(grid[0, :])):
+            blacked_bool = (np.array([i, j]) == blacked_state).all(1)
+            initial_bool = (np.array([i, j]) == initial_state).all(0)
+            terminal_bool = (np.array([i, j]) == terminal_state).all(1)
+            if blacked_bool.any():
+                ax.text(j, i, 'X', ha="center", va="center", color="w", fontsize=20)
+            elif initial_bool.any():
+                ax.text(j, i, 'S', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
+                ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
+            elif terminal_bool.any():
+                ax.text(j, i, 'T', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
+                ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
+            else:
+                text = ax.text(j, i, grid[i, j],
+                               ha="center", va="center", color="w")
+    if show:
+        plt.show()
 
-    def sample_buffer(self, batch_size):
-        max_mem = min(self.mem_cntr, self.mem_size)
+    return fig, ax, im, cb
 
-        batch = np.random.choice(max_mem, batch_size)
 
-        states = self.state_memory[batch]
-        actions = self.action_memory[batch]
-        rewards = self.reward_memory[batch]
-        states_ = self.new_state_memory[batch]
-        dones = self.terminal_memory[batch]
+def run_trajectory(env, agent, epsilon, abstract=False):
+    env.reset()
+    agent.reset_trajectory()
+    agent.epsilon = epsilon
+    agent.abstract = abstract
 
-        return states, actions, rewards, states_, dones
+    while not env.terminal:
+        action = agent.select_action(env.state)
+
+        transition = env.step(action)
+
+        agent.update(transition)
+
+    return agent.trajectory
+
+
+def generate_codes(verts):
+    codes = []
+    if len(verts) >= 2:
+        codes.append(Path.MOVETO)
+        for i in range(1, len(verts)):
+            codes.append(Path.LINETO)
+        return (codes)
+    else:
+        print('trajectory less than 2 steps')
+
+
+def plot_trajectory(trajectory, grid, terminal_state, initial_state, blacked_state, show=True, fig=None, ax=None):
+    verts = [np.flip(t[0]) for t in trajectory]
+    codes = generate_codes(verts)
+    path = Path(verts, codes)
+
+    if fig is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+    patch = patches.PathPatch(path, facecolor='none', lw=2)
+    ax.add_patch(patch)
+
+    fig, ax, im, cb = plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=fig, ax=ax, show=show)
+
+    if show:
+        pass
+    else:
+        return fig, ax, im, cb, patch
+
+
+def action_abstraction(sa_values_table, state_dist_table):
+    states = list(sa_values_table.keys())
+    arbitrary_state = states[0]
+    action_keys = sa_values_table[arbitrary_state].keys()
+    abstraction = {}
+    for action in action_keys:
+        if action in abstraction.keys():
+            pass
+        else:
+            abstraction[action] = Qpi_a(action, sa_values_table, state_dist_table)
+
+    return abstraction
+
+
+def action_abstraction_bias(sa_values_table, a_abstraction_table):
+    sa_values = []
+    a_values = []
+    for state, actions in sa_values_table.items():
+        for a, v_a in actions.items():
+            sa_values.append(v_a)
+            a_values.append(a_abstraction_table[a])
+
+    bias_squared = [(sa_values[i] - a_values[i]) ** 2 for i in range(len(sa_values))]
+
+    return sa_values, a_values, bias_squared
+
+
+def generate_heatmap(grid, table, aggf=None):
+    hm = np.copy(grid) * 0
+    if aggf is None:
+        aggf = lambda x: x
+
+    for k, v in table.items():
+        hm[int(k[1]), int(k[3])] = aggf(v)
+
+    return hm

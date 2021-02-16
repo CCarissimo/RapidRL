@@ -19,6 +19,22 @@ class Estimator:
         self.approximator.update(buffer_sample)
 
 
+class Mask:
+    def __init__(self):
+        pass
+
+    def apply(self, state):
+        pass
+
+
+class identity(Mask):
+    def __init__(self):
+        pass
+
+    def apply(self, state):
+        return state
+
+
 class Approximator:
     def __init__(self):
         pass

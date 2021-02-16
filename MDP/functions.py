@@ -132,7 +132,7 @@ def run_trajectory(env, agent, epsilon, abstract=False):
 
         transition = env.step(action)
 
-        agent.update(transition)
+        agent.observe(transition)
 
     return agent.trajectory
 
@@ -149,7 +149,7 @@ def generate_codes(verts):
 
 
 def plot_trajectory(trajectory, grid, terminal_state, initial_state, blacked_state, show=True, fig=None, ax=None):
-    verts = [np.flip(t[0]) for t in trajectory]
+    verts = [np.flip(t.state) for t in trajectory]
     codes = generate_codes(verts)
     path = Path(verts, codes)
 

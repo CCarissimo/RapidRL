@@ -1,10 +1,25 @@
+from abc import ABC
 import numpy as np
 from gym.core import Env
 import matplotlib.pyplot as plt
 
 
+class Transition:
+    def __init__(self, state, action, state_, reward, terminal, targets):
+        self.state = state
+        self.action = action
+        self.state_ = state_
+        self.reward = reward
+        self.terminal = terminal
+        self.targets = targets
+
+    def unpack_transition(self):
+        transition = (self.state, self.action, self.state_, self.reward, self.terminal)
+        return transition
+
+
 # Gridworld Environment class, takes grid as argument, most important method is step
-class gridworld(Env):
+class gridworld(Env, ABC):
     def __init__(self, grid, terminal_states, initial_state, blacked_states, max_steps):
         super().__init__()
         self.actions = ['up', 'down', 'left', 'right']
@@ -45,11 +60,12 @@ class gridworld(Env):
         if self.step_counter == self.max_steps:
             self.terminal = True
 
-        transition = self.state, action, state_, reward, self.terminal
+        t_sa = Transition(state=self.state, action=action, state_=state_, reward=reward, terminal=self.terminal,
+                          targets=None)
         self.state = state_
         self.step_counter += 1
 
-        return transition
+        return t_sa
 
     def reset(self):
         self.state = self.initial_state

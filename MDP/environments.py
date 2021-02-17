@@ -1,7 +1,25 @@
 from abc import ABC
 import numpy as np
 from gym.core import Env
-import matplotlib.pyplot as plt
+
+
+class State:
+    def __init__(self, row, col):
+        self.row = row
+        self.col = col
+        self.actions_dict = {'up': np.array((-1, 0)), 'down': np.array((1, 0)), 'left': np.array((0, -1)),
+                             'right': np.array((0, 1))}
+        self.array = np.array([row, col])
+
+    def do(self, action):
+        row, col = self.array + self.actions_dict[action]
+        return State(row=row, col=col)
+
+    def __eq__(self, other):
+        return hasattr(other, 'array') and (self.array == other.array).all()
+
+    def __hash__(self):
+        return hash(str(self.array))
 
 
 class Transition:
@@ -12,10 +30,6 @@ class Transition:
         self.reward = reward
         self.terminal = terminal
         self.targets = targets
-
-    def unpack_transition(self):
-        transition = (self.state, self.action, self.state_, self.reward, self.terminal)
-        return transition
 
 
 # Gridworld Environment class, takes grid as argument, most important method is step
@@ -28,33 +42,33 @@ class gridworld(Env, ABC):
         self.actions_map = {action: i for i, action in enumerate(self.actions)}
         self.grid = grid
         self.terminal_states = terminal_states
-        self.initial_state = initial_state
+        self.initial_state = State(row=initial_state[0], col=initial_state[1])
         self.blacked_states = blacked_states
         self.step_counter = 0
         self.max_steps = max_steps
         self.terminal = False
-        self.state = self.initial_state
+        self.state = State(row=initial_state[0], col=initial_state[1])
         self.grid_width = len(self.grid[0, :]) - 1
         self.grid_height = len(self.grid[:, 0]) - 1
 
     def step(self, action):
 
-        state_ = self.state + self.actions_dict[action]
+        state_ = self.state.do(action)
 
-        if state_[0] < 0 or state_[0] > self.grid_height:
+        if state_.row < 0 or state_.row > self.grid_height:
             state_ = self.state
-        elif state_[1] < 0 or state_[1] > self.grid_width:
+        elif state_.col < 0 or state_.col > self.grid_width:
             state_ = self.state
         else:
             for s in self.blacked_states:
-                if (state_ == s).all():
+                if (state_.array == s).all():
                     state_ = self.state
                     continue
 
-        reward = self.grid[state_[0], state_[1]]
+        reward = self.grid[state_.row, state_.col]
 
         for s in self.terminal_states:
-            if (state_ == s).all():
+            if (state_.array == s).all():
                 self.terminal = True
 
         if self.step_counter == self.max_steps:

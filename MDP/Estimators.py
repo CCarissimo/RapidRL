@@ -1,36 +1,48 @@
 class Estimator:
-    def __init__(self, approximator, mask):
+    def __init__(self, approximator, mask, actions=None):
+        if actions is None:
+            self.actions = ['up', 'down', 'left', 'right']
         self.approximator = approximator
         self.mask = mask
         self.visits = {}
 
-    def evaluate(self, state, action):
-        c = self.mask.apply(state)
-        return self.approximator.value(c, action)
+    def evaluate(self, transition):
+        c = self.mask.apply(transition)
+        return self.approximator.evaluate(c, transition)
 
     def update(self, buffer_sample):
         for i, transition in enumerate(buffer_sample):
-            c = self.mask.apply(transition.state)
-            self.visits[(c, transition.action)] += 1
-            N_ca = self.visits[(c, transition.action)]
-            transition.context = c
-            transition.N_ca = N_ca
+            transition = self.mask.apply(transition)
+            self.count_visits(transition)
             buffer_sample[i] = transition
 
         self.approximator.update(buffer_sample)
+
+    def count_visits(self, transition):
+        if transition.context not in self.visits.keys():
+            self.visits[transition.context] = {a: 0 for a in self.actions}
+        self.visits[transition.context][transition.action] += 1
+        transition.N_ca = self.visits[transition.context][transition.action]
 
 
 class Mask:
     def __init__(self):
         pass
 
-    def apply(self, state):
+    def apply(self, transition):
         pass
 
 
 class identity(Mask):
-    def apply(self, state):
-        return state
+    def apply(self, transition):
+        transition.context = transition.state
+        return transition
+
+
+class arrival_state(Mask):
+    def apply(self, transition):
+        transition.context = transition.state_
+        return transition
 
 
 class Approximator:
@@ -52,6 +64,11 @@ class table(Approximator):
         self.actions = actions
         self.table = {}
 
+    def update(self, buffer_sample):
+        for transition in buffer_sample:
+            self.update_table(transition)
+            self.update_value(transition)
+
     def update_table(self, transition):
         if transition.state not in self.table.keys():
             self.table[transition.state] = {a: 0 for a in self.actions}
@@ -59,12 +76,7 @@ class table(Approximator):
             self.table[transition.state_] = {a: 0 for a in self.actions}
 
     def update_value(self, transition):
-        pass
-
-    def update(self, buffer_sample):
-        for transition in buffer_sample:
-            self.update_table(transition)
-            self.update_value(transition)
+        self.table[transition.state][transition.action] += 1
 
     def evaluate(self, c, a):
         return self.table[c][a]
@@ -74,7 +86,7 @@ class table(Approximator):
 #     def update_value(self, s, a, s_, r, targets, N_ca):
 
 
-class bellman_table(table):
+class bellman_Q_table(table):
     def __init__(self, alpha, gamma):
         super().__init__()
         self.alpha = alpha
@@ -82,6 +94,12 @@ class bellman_table(table):
 
     def update_value(self, t):
         self.table[t.state][t.action] = self.table[t.state][t.action] + self.alpha * (t.reward + self.gamma * max(
+            v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
+
+
+class bellman_N_table(bellman_Q_table):
+    def update_value(self, t):
+        self.table[t.state][t.action] = self.table[t.state][t.action] + self.alpha * (1/t.N_ca + self.gamma * max(
             v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
 
 

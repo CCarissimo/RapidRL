@@ -12,7 +12,7 @@ def Qpi_sa(state, action, trajectories, gamma, q_table):
         step_counter = 0
         for t in trajectory:
             disc_ret = 0
-            if state == t.state.array and action == t.action:
+            if state == t.state and action == t.action:
                 store = True
 
             if store:
@@ -64,10 +64,10 @@ def cumulative_table(trajectories, gamma, function_sa, table):
 
 # Calculate state visit distribution
 def state_dist(visits):
-    total_visits = sum(sum(visits[state].values()) for state in visits.keys())
+    total_visits = sum(v for state,v in visits.items())
     rho = {}
     for s in visits.keys():
-        rho[s] = sum(visits[s].values()) / total_visits
+        rho[s] = visits[s] / total_visits
     return rho
 
 
@@ -76,7 +76,6 @@ def Qpi_a(action, return_table, rho):
     abstraction = 0
     for state, actions in return_table.items():
         if action in actions.keys():
-            print(rho)
             abstraction += rho[state] * return_table[state][action]
     return abstraction
 
@@ -198,6 +197,6 @@ def generate_heatmap(grid, table, aggf=None):
         aggf = lambda x: x
 
     for k, v in table.items():
-        hm[k.row, k.col] = aggf(v)
+        hm[k] = aggf(v)
 
     return hm

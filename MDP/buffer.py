@@ -34,11 +34,7 @@ class ReplayMemory:
         self.size = min(self.size + 1, self.max_size)
         self.index = (self.index + 1) % self.max_size
 
-    def unpack_sample(self, S):
-        return S
-
     def sample(self, batch_size):
         indices = sample(range(self.size), batch_size)
         S = [self.buffer[index] for index in indices]
-        S = self.unpack_sample(S)
         return S

@@ -7,16 +7,16 @@ import matplotlib.patches as patches
 # For (s,a), find the cumulative discounted sum of rewards over a set of trajectories
 def Qpi_sa(state, action, trajectories, gamma, q_table):
     returns = []
-    for t in trajectories:
+    for trajectory in trajectories:
         store = False
         step_counter = 0
-        for s, a, _, _, _ in t:
+        for t in trajectory:
             disc_ret = 0
-            if (state == s).all() and action == a:
+            if state == t.state and action == t.action:
                 store = True
 
             if store:
-                disc_ret += gamma ** step_counter * q_table[str(s)][a]
+                disc_ret += gamma ** step_counter * q_table[t.state][t.action]
                 step_counter += 1
 
         if store:
@@ -28,16 +28,16 @@ def Qpi_sa(state, action, trajectories, gamma, q_table):
 # For (s,a), find the cumulative discounted sum of novelties over a set of trajectories
 def Npi_sa(state, action, trajectories, gamma, visits):
     returns = []
-    for t in trajectories:
+    for trajectory in trajectories:
         store = False
         step_counter = 0
-        for s, a, _, _, _ in t:
+        for t in trajectory:
             disc_ret = 0
-            if (state == s).all() and action == a:
+            if state == t.state and action == t.action:
                 store = True
 
             if store:
-                disc_ret += gamma ** step_counter * visits[str(s)][a]
+                disc_ret += gamma ** step_counter * visits[t.state][t.action]
                 step_counter += 1
 
         if store:
@@ -49,24 +49,22 @@ def Npi_sa(state, action, trajectories, gamma, visits):
 # Create a dictionary indexed by state action strings with discounted
 def cumulative_table(trajectories, gamma, function_sa, table):
     returns_table = {}
-    for t in trajectories:
-        for s, a, _, _, _ in t:
-            state = str(s)
-
-            if state in returns_table.keys():
-                if a in returns_table[state].keys():
+    for trajectory in trajectories:
+        for t in trajectory:
+            if t.state in returns_table.keys():
+                if t.action in returns_table[t.state].keys():
                     continue
                 else:
-                    returns_table[state][a] = function_sa(s, a, trajectories, gamma, table)
+                    returns_table[t.state][t.action] = function_sa(t.state, t.action, trajectories, gamma, table)
             else:
-                returns_table[state] = {a: function_sa(s, a, trajectories, gamma, table)}
+                returns_table[t.state] = {t.action: function_sa(t.state, t.action, trajectories, gamma, table)}
 
     return returns_table
 
 
 # Calculate state visit distribution
 def state_dist(visits):
-    total_visits = sum(visits[state] for state in visits.keys())
+    total_visits = sum(v for state,v in visits.items())
     rho = {}
     for s in visits.keys():
         rho[s] = visits[s] / total_visits
@@ -113,8 +111,7 @@ def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None,
                 ax.text(j, i, 'T', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
                 ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
             else:
-                text = ax.text(j, i, grid[i, j],
-                               ha="center", va="center", color="w")
+                ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
     if show:
         plt.show()
 
@@ -132,7 +129,7 @@ def run_trajectory(env, agent, epsilon, abstract=False):
 
         transition = env.step(action)
 
-        agent.update(transition)
+        agent.observe(transition)
 
     return agent.trajectory
 
@@ -149,7 +146,7 @@ def generate_codes(verts):
 
 
 def plot_trajectory(trajectory, grid, terminal_state, initial_state, blacked_state, show=True, fig=None, ax=None):
-    verts = [np.flip(t[0]) for t in trajectory]
+    verts = [np.flip(t.state) for t in trajectory]
     codes = generate_codes(verts)
     path = Path(verts, codes)
 
@@ -200,6 +197,6 @@ def generate_heatmap(grid, table, aggf=None):
         aggf = lambda x: x
 
     for k, v in table.items():
-        hm[int(k[1]), int(k[3])] = aggf(v)
+        hm[k] = aggf(v)
 
     return hm

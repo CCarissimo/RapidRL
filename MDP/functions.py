@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.patches as patches
-
+from collections import defaultdict
 
 # For (s,a), find the cumulative discounted sum of rewards over a set of trajectories
 def Qpi_sa(state, action, trajectories, gamma, q_table):
@@ -64,8 +64,8 @@ def cumulative_table(trajectories, gamma, function_sa, table):
 
 # Calculate state visit distribution
 def state_dist(visits):
-    total_visits = sum(v for state,v in visits.items())
-    rho = {}
+    total_visits = sum(v for v in visits.values())
+    rho = defaultdict(int)
     for s in visits.keys():
         rho[s] = visits[s] / total_visits
     return rho
@@ -125,7 +125,7 @@ def run_trajectory(env, agent, epsilon, abstract=False):
     agent.abstract = abstract
 
     while not env.terminal:
-        action = agent.select_action(env.state)
+        action = agent.select_action(env.transition)
 
         transition = env.step(action)
 

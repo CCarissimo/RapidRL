@@ -1,4 +1,4 @@
-from .Estimators import *
+from .estimators import *
 from .agent import *
 from .functions import *
 from .environments import *

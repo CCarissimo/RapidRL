@@ -1,4 +1,5 @@
 from abc import ABC
+from collections import defaultdict
 
 
 class Estimator:
@@ -7,21 +8,21 @@ class Estimator:
             self.actions = ['up', 'down', 'left', 'right']
         self.approximator = approximator
         self.mask = mask
-        self.visits = dict()
+        self.visits = defaultdict(lambda: {a: 0 for a in self.actions})
 
     def evaluate(self, transition):
         c = self.mask.apply(transition)
-        return self.approximator.evaluate(c, transition)
+        return self.approximator.evaluate(c)
 
     def update(self, buffer_sample):
         for transition in buffer_sample:
+            self.count_visits(transition)
             transition.N_ca = self.visits[transition.context][transition.action]
         self.approximator.update(buffer_sample)
 
     def count_visits(self, transition):
-        transition = self.mask.apply(transition)
-        if transition.context not in self.visits.keys():
-            self.visits[transition.context] = {a: 0 for a in self.actions}
+        context = self.mask.apply(transition)
+        transition.context = context
         self.visits[transition.context][transition.action] += 1
 
 
@@ -35,14 +36,14 @@ class Mask(ABC):
 
 class identity(Mask):
     def apply(self, transition):
-        transition.context = transition.state
-        return transition
+        context = transition.state
+        return context
 
 
 class arrival_state(Mask):
     def apply(self, transition):
-        transition.context = transition.state_
-        return transition
+        context = transition.state_
+        return context
 
 
 class Approximator(ABC):
@@ -62,7 +63,7 @@ class table(Approximator):
         if actions is None:
             actions = ['up', 'down', 'left', 'right']
         self.actions = actions
-        self.table = dict()
+        self.table = defaultdict(lambda: {a: 0 for a in self.actions})
 
     def update(self, buffer_sample):
         for transition in buffer_sample:
@@ -70,16 +71,17 @@ class table(Approximator):
             self.update_value(transition)
 
     def update_table(self, transition):
-        if transition.state not in self.table.keys():
-            self.table[transition.state] = {a: 0 for a in self.actions}
-        if transition.state_ not in self.table.keys():
-            self.table[transition.state_] = {a: 0 for a in self.actions}
+        # if transition.state not in self.table.keys():
+        #     self.table[transition.state] = {a: 0 for a in self.actions}
+        # if transition.state_ not in self.table.keys():
+        #     self.table[transition.state_] = {a: 0 for a in self.actions}
+        pass
 
     def update_value(self, transition):
         self.table[transition.state][transition.action] += 1
 
-    def evaluate(self, c, a):
-        return self.table[c][a]
+    def evaluate(self, c):
+        return self.table[c]
 
 
 class state_table(table):
@@ -102,9 +104,19 @@ class bellman_Q_table(table):
             v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
 
 
+class bQt_novel_alpha(table):
+    def __init__(self, gamma):
+        super().__init__()
+        self.gamma = gamma
+
+    def update_value(self, t):
+        self.table[t.state][t.action] = self.table[t.state][t.action] + 1/t.N_ca * (t.reward + self.gamma * max(
+            v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
+
+
 class bellman_N_table(bellman_Q_table):
     def update_value(self, t):
-        self.table[t.state][t.action] = self.table[t.state][t.action] + self.alpha * (1 / t.N_ca + self.gamma * max(
+        self.table[t.state][t.action] = self.table[t.state][t.action] + self.alpha * (1/t.N_ca + self.gamma * max(
             v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
 
 
@@ -112,3 +124,8 @@ class average(table):
     def update_value(self, t):
         self.table[t.context][t.action] = self.table[t.context][t.action] * (
                     t.N_ca - 1) / t.N_ca + t.reward * 1 / t.N_ca
+
+
+class ema(table):
+    def update_value(self, t):
+        self.table[t.context][t.action] = self.table[t.context][t.action] * (1 - 0.25) + (1/t.N_ca) * 0.25

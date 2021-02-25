@@ -4,6 +4,7 @@ from matplotlib.path import Path
 import matplotlib.patches as patches
 from collections import defaultdict
 
+
 # For (s,a), find the cumulative discounted sum of rewards over a set of trajectories
 def Qpi_sa(state, action, trajectories, gamma, q_table):
     returns = []

@@ -1,5 +1,6 @@
 from abc import ABC
 from collections import defaultdict
+import numpy as np
 
 
 class Estimator:
@@ -129,3 +130,27 @@ class average(table):
 class ema(table):
     def update_value(self, t):
         self.table[t.context][t.action] = self.table[t.context][t.action] * (1 - 0.25) + (1/t.N_ca) * 0.25
+
+
+class global_N_abstractor(bellman_N_table):
+    def evaluate(self, c):
+        d = defaultdict(list)
+        for s, actions in self.table.items():
+            for a, value in actions.items():
+                d[a].append(value)
+        global_abstractor = {a: 0 for a in self.actions}
+        for a, v in d.items():
+            global_abstractor[a] = np.mean(v)
+        return global_abstractor
+
+
+class global_Q_abstractor(bellman_N_table):
+    def evaluate(self, c):
+        d = defaultdict(list)
+        for s, actions in self.table.items():
+            for a, value in actions.items():
+                d[a].append(value)
+        global_abstractor = {a: 0 for a in self.actions}
+        for a, v in d.items():
+            global_abstractor[a] = np.mean(v)
+        return global_abstractor

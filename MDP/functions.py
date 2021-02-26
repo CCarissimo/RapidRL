@@ -192,12 +192,23 @@ def action_abstraction_bias(sa_values_table, a_abstraction_table):
     return sa_values, a_values, bias_squared
 
 
-def generate_heatmap(grid, table, aggf=None):
-    hm = np.copy(grid) * 0
-    if aggf is None:
-        aggf = lambda x: x
+def generate_heatmap(grid, table, aggf=None, actions=False):
+    if actions:
+        hm = np.zeros((3,3))
+        if aggf is None:
+            aggf = lambda x: x
 
-    for k, v in table.items():
-        hm[k] = aggf(v)
+        hm[0,1] = table['up']
+        hm[1,2] = table['right']
+        hm[1,0] = table['left']
+        hm[2,1] = table['down']
+
+    else:
+        hm = np.copy(grid) * 0
+        if aggf is None:
+            aggf = lambda x: x
+
+        for k, v in table.items():
+            hm[k] = aggf(v)
 
     return hm

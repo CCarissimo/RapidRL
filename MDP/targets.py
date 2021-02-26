@@ -14,4 +14,4 @@ class TD0(Target):
         self.gamma = gamma
 
     def compute(self, trajectory):
-        nV =
+        nV = 0

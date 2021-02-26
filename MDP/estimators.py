@@ -144,7 +144,7 @@ class global_N_abstractor(bellman_N_table):
         return global_abstractor
 
 
-class global_Q_abstractor(bellman_N_table):
+class global_Q_abstractor(bQt_novel_alpha):
     def evaluate(self, c):
         d = defaultdict(list)
         for s, actions in self.table.items():

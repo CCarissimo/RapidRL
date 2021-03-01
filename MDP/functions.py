@@ -198,10 +198,10 @@ def generate_heatmap(grid, table, aggf=None, actions=False):
         if aggf is None:
             aggf = lambda x: x
 
-        hm[0,1] = table['up']
-        hm[1,2] = table['right']
-        hm[1,0] = table['left']
-        hm[2,1] = table['down']
+        hm[0,1] = table[0]['up']
+        hm[1,2] = table[0]['right']
+        hm[1,0] = table[0]['left']
+        hm[2,1] = table[0]['down']
 
     else:
         hm = np.copy(grid) * 0

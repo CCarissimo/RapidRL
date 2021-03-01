@@ -27,45 +27,54 @@ header-includes:
 # Abstract
 Deep reinforcement learning is great with abundant resources and many samples. Reality however confronts agents with limited resources, sparse rewards and deceptive feedback. We need rapid agents that explore effectively, by finding sparse rewards, and efficiently, by using few samples. Recent work has shown that novelty as a proxy for "interestingness" can be used to guide exploration in an effective manner. Novelty search biases exploration towards behaviors that are potentially interesting. Additionally, abstraction techniques can help make efficient use of samples. Abstraction is successful when it constrains an agent to focus on features that are most influential by abstracting out irrelevant information. Our contribution towards effective and efficient deep exploration is novelty guided exploration with abstraction.
 
+![Figure title](images/cwi-logo.png)
+
 
 # Introduction
 
+
 ## Overview
 
-1. The deep exploration problem
-2. Our ambition: Rapid RL
+1. The Challenge of Deep Exploration
 2. Approaches
-3. Abstraction + novelty
+3. Abstractions on Novelty
 
 
 ## Deep Exploration
 
-Sparse rewards, too much experience required by most (esp. deep) solutions.
+Finding Sparse Rewards,
+with Bounded Resources
+in Deceptive Environments.
 
 
-## Our ambition: Rapid RL
+# Our ambition: Rapid RL
 
-### Direct challenge
+
+## Direct challenge
 > Learn Daniel Willemsen's environment in three trajectories.
 
-### Stretch goal
+add willemsen gridworld image
+
+## Stretch goal
 > Learn any simple exploration problem quickly.
 
 
-## Approaches
+# Approach - Novelty
 
-![Figure title](images/cwi-logo.png)
+> New is not always Interesting, but Interesting is always New.  
 
-### Related approaches
-- Novelty search
-- Curiosity
-- Optimism & value function randomisation
+SUBJECT: $x: behavior$
+MEASURE: $\rho(x) = \frac{1}{k} \sum_{i=0}^k dist(x,\mu_i)$
 
-## Abstraction + novelty
+The average distance of a behavior to its k-nearest behaviors. 
 
-Why is abstraction helping
 
-What form of novelty do we estimate
+# Approach - Curiosity
+
+
+
+# Approach - Value Function Randomization
+
 
 # Method
 

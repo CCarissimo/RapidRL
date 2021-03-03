@@ -33,30 +33,61 @@ Deep reinforcement learning is great with abundant resources and many samples. R
 # Introduction
 
 
-## Overview
+## Outline
 
 1. The Challenge of Deep Exploration
 2. Approaches
 3. Abstractions on Novelty
 
-
-## Deep Exploration
-
-Finding Sparse Rewards,
-with Bounded Resources
-in Deceptive Environments.
+## Our ambition: Rapid RL
 
 
-# Our ambition: Rapid RL
-
-
-## Direct challenge
+### Direct challenge
 > Learn Daniel Willemsen's environment in three trajectories.
 
 add willemsen gridworld image
 
-## Stretch goal
+### Stretch goal
 > Learn any simple exploration problem quickly.
+
+
+# Deep Exploration
+
+Finding rewards that are:
+
+ 1. Sparse
+ 
+ 2. Deceptive
+ 
+with Bounded Resources.
+
+
+# The Problem with Objectives
+
+Sparsity:
+
+An agent only learns when rewarded. 
+
+Infrequent rewards lead to infrequent learning.
+
+Deception:
+
+> Sometimes a mutation increases fitness but actually leads further from the objective. (Goldberg, 1987)
+
+Bounded Resources:
+
+We can not practically rely on convergence in the limit. 
+
+
+# Extrinsic vs Intrinsic Rewards
+
+Recalling our discussion of Munchausen RL:
+
+target: $y^M = [r_e + r_i] + \gamma V^{ME}$
+
+$r_e:$ external reward from the environment,
+
+$r_i = \alpha \tau ln \pi(a_t|s_t)$: internal reward
 
 
 # Approach - Count Based Exploration 

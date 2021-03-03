@@ -27,27 +27,37 @@ header-includes:
 # Abstract
 Deep reinforcement learning is great with abundant resources and many samples. Reality however confronts agents with limited resources, sparse rewards and deceptive feedback. We need rapid agents that explore effectively, by finding sparse rewards, and efficiently, by using few samples. Recent work has shown that novelty as a proxy for "interestingness" can be used to guide exploration in an effective manner. Novelty search biases exploration towards behaviors that are potentially interesting. Additionally, abstraction techniques can help make efficient use of samples. Abstraction is successful when it constrains an agent to focus on features that are most influential by abstracting out irrelevant information. Our contribution towards effective and efficient deep exploration is novelty guided exploration with abstraction.
 
-![Figure title](images/cwi-logo.png)
+<!--![Figure title](images/cwi-logo.png) -->
 
 
-# Introduction
+# Outline
+
+1. Our Ambition: Rapid RL 
+    - Direct Challenge
+    - Stretch Goal
+
+2. Deep Exploration
+    - Sparsity
+    - Deception
+    - Bounded
+    
+3. Approaches
+    - Abstraction
+    - Novelty & Variants
+    
+4. Contributions
+    - Abstraction over Novelty
+    - Abstraction based action selection
 
 
-## Outline
+# Our ambition: Rapid RL
 
-1. The Challenge of Deep Exploration
-2. Approaches
-3. Abstractions on Novelty
-
-## Our ambition: Rapid RL
-
-
-### Direct challenge
+## Direct challenge
 > Learn Daniel Willemsen's environment in three trajectories.
 
 add willemsen gridworld image
 
-### Stretch goal
+## Stretch goal
 > Learn any simple exploration problem quickly.
 
 
@@ -61,25 +71,29 @@ Finding rewards that are:
  
 with Bounded Resources.
 
+## The Problem(s) with Objectives
 
-# The Problem with Objectives
+Lehman, Stanley (2011)
 
-Sparsity:
+ 
+# Deep Exploration - Sparsity
 
 An agent only learns when rewarded. 
 
 Infrequent rewards lead to infrequent learning.
 
-Deception:
+
+# Deep Exploration - Deception
 
 > Sometimes a mutation increases fitness but actually leads further from the objective. (Goldberg, 1987)
 
-Bounded Resources:
+
+# Deep Exploration - Bounded Resources
 
 We can not practically rely on convergence in the limit. 
 
 
-# Extrinsic vs Intrinsic Rewards
+# Extrinsic vs Intrinsic Rewards 
 
 Recalling our discussion of Munchausen RL:
 
@@ -138,7 +152,7 @@ Mean squared error against a fixed variance gaussian density.
 Burda et. al. (2018)
 
 
-# Extension - Novelty 
+# Approach - Approximating Novelty 
 
 When behavior space is intractable, continuous, multidimensional: LARGE
 
@@ -149,7 +163,7 @@ MEASURE: $\rho(x) = \frac{1}{k} \sum_{i=0}^k dist(x,\mu_i)$
 Ramamurthy et. al. (2020)
 
 
-# Extension - Curiosity Bottleneck 
+# Approach - Curiosity Bottleneck 
 
 > Noisy-TV Problem: Pure randomness is always novel, and truly un-interesting
 

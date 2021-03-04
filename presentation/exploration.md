@@ -55,7 +55,7 @@ Deep reinforcement learning is great with abundant resources and many samples. R
 ## Direct challenge
 > Learn Daniel Willemsen's environment in three trajectories.
 
-add willemsen gridworld image
+![Willemsen Gridworld](images/willemsen_grid.png)
 
 ## Stretch goal
 > Learn any simple exploration problem quickly.
@@ -82,10 +82,14 @@ An agent only learns when rewarded.
 
 Infrequent rewards lead to infrequent learning.
 
+![Deep Sea Exploration](images\deep_sea.png){ width=75% }
+
 
 # Deep Exploration - Deception
 
 > Sometimes a mutation increases fitness but actually leads further from the objective. (Goldberg, 1987)
+
+![Simple Environment with Deceptive Reward](images\deceptive_reward.png)
 
 
 # Deep Exploration - Bounded Resources
@@ -93,15 +97,59 @@ Infrequent rewards lead to infrequent learning.
 We can not practically rely on convergence in the limit. 
 
 
-# Extrinsic vs Intrinsic Rewards 
+# Approach - Abstraction 
+
+Improved sample efficiency.
+
+Focus attention on salient features.
+
+![Abstraction Contexts](images\abstractors.png)
+
+Contexts over transition histories are possible.
+
+
+# Approach - Abstraction
+
+An Abstractor $\mathcal{A}: (C, f, Q, N)$
+
+$C$ set of contexts
+
+$f: \mathcal{H} \times \mathcal{A} \longleftarrow C$, function mapping histories to contexts 
+
+$Q: \mathcal{C} \times \mathcal{A} \longleftarrow \mathbb{R}$, function mapping action values in context
+
+$N: \mathcal{C} \times \mathcal{A} \longleftarrow \mathbb{N}$, function counting actions in context
+
+Baier, Kaisers (2021)
+
+
+# Approach - Non-Objective Search
+
+DO NOT: pursue objective maximizing behavior
+
+DO: pursue 'novel' behavior
+
+via intrinsic rewards
+
+
+# Approach - Intrinsic Rewards 
 
 Recalling our discussion of Munchausen RL:
 
-target: $y^M = [r_e + r_i] + \gamma V^{ME}$
+![Pure and Mixed Intrinsic Rewards](images\intrinsic_reward.png)
 
-$r_e:$ external reward from the environment,
+Non-Objective Search
 
-$r_i = \alpha \tau ln \pi(a_t|s_t)$: internal reward
+
+# Approach - Non-Objective Search
+
+> Criticism: internal reward just another objective
+
+> Rebuttal: novelty rewards are based on past behaviors and mostly orthogonal to objective rewards
+
+Lehman, Stanley (2011)
+
+Best when always changing, non-stationary, diverging.
 
 
 # Approach - Count Based Exploration 
@@ -125,7 +173,9 @@ MEASURE: $\rho(x) = \frac{1}{k} \sum_{i=0}^k dist(x,\mu_i)$
 
 The average distance of a behavior to its k-nearest behaviors. 
 
-Lehman, Stanley (2011)
+Lehman, Stanley (2011) 
+
+Video: [Novelty-Biped](https://www.youtube.com/watch?v=dXQPL9GooyI&t=120s)
 
 
 # Approach - Diversity Driven RL 

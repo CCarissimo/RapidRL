@@ -2,7 +2,7 @@
 title: "Deep Exploration"
 subtitle: "Challenges and solutions of reinforcement learning"
 author: \textbf{Cesare Carissimo and Michael Kaisers} -- Intelligent and Autonomous Systems research group Centrum Wiskunde & Informatica
-date: "tbd March 2021"
+date: "5th March 2021"
 theme: "metropolis"
 titlegraphic: images/cwi-logo.png
 beameroption: ""
@@ -10,7 +10,7 @@ themeoptions: "numbering=fraction,progressbar=frametitle,sectionpage=none"
 fontsize: 11pt
 output:
   beamer_presentation:
-    slide_level: 2
+    slide_level: 1
   pdf_document:
       toc: false
 export_on_save:
@@ -24,22 +24,21 @@ header-includes:
 ---
 
 
+<!--
 # Abstract
 Deep reinforcement learning is great with abundant resources and many samples. Reality however confronts agents with limited resources, sparse rewards and deceptive feedback. We need rapid agents that explore effectively, by finding sparse rewards, and efficiently, by using few samples. Recent work has shown that novelty as a proxy for "interestingness" can be used to guide exploration in an effective manner. Novelty search biases exploration towards behaviors that are potentially interesting. Additionally, abstraction techniques can help make efficient use of samples. Abstraction is successful when it constrains an agent to focus on features that are most influential by abstracting out irrelevant information. Our contribution towards effective and efficient deep exploration is novelty guided exploration with abstraction.
-
+-->
 <!--![Figure title](images/cwi-logo.png) -->
 
 
 # Outline
 
 1. Our Ambition: Rapid RL 
-    - Direct Challenge
-    - Stretch Goal
 
-2. Deep Exploration
+2. Why Deep Exploration is Hard
     - Sparsity
     - Deception
-    - Bounded
+    - Bounded Resources
     
 3. Approaches
     - Abstraction
@@ -47,18 +46,12 @@ Deep reinforcement learning is great with abundant resources and many samples. R
     
 4. Contributions
     - Abstraction over Novelty
-    - Abstraction based action selection
+    - Combination of Abstractions
 
 
 # Our ambition: Rapid RL
 
-## Direct challenge
-> Learn Daniel Willemsen's environment in three trajectories.
-
-![Willemsen Gridworld](images/willemsen_grid.png)
-
-## Stretch goal
-> Learn any simple exploration problem quickly.
+![1) Solve this in three trajectories, 2) Explore with emergent policies of gradually increasing complexity, 3) Sample Efficient Discovery of Sparse Rewards](images/willemsen_grid.png)
 
 
 # Deep Exploration
@@ -82,14 +75,14 @@ An agent only learns when rewarded.
 
 Infrequent rewards lead to infrequent learning.
 
-![Deep Sea Exploration](images\deep_sea.png){ width=75% }
+![Deep Sea Exploration](images/deep_sea.png){ width=75% }
 
 
 # Deep Exploration - Deception
 
 > Sometimes a mutation increases fitness but actually leads further from the objective. (Goldberg, 1987)
 
-![Simple Environment with Deceptive Reward](images\deceptive_reward.png)
+![A simple environment where following the objective gradient may lead to a deceptive reward.](images/deceptive_reward.png)
 
 
 # Deep Exploration - Bounded Resources
@@ -99,28 +92,29 @@ We can not practically rely on convergence in the limit.
 
 # Approach - Abstraction 
 
-Improved sample efficiency.
-
-Focus attention on salient features.
-
-![Abstraction Contexts](images\abstractors.png)
-
-Contexts over transition histories are possible.
+![Abstraction generalisation at the cost of bias. Different abstraction contexts are possible from the identity (single cell) via local (3x3) to global contexts. Contexts over transition histories are also possible.](images/abstractors.png)
 
 
 # Approach - Abstraction
 
-An Abstractor $\mathcal{A}: (C, f, Q, N)$
+An Abstractor $\mathcal{A}: (C, f, V, N)$
 
-$C$ set of contexts
+$C$ set of contexts;
 
-$f: \mathcal{H} \times \mathcal{A} \longleftarrow C$, function mapping histories to contexts 
+$f: \mathcal{H} \times \mathcal{A} \xrightarrow{} C$, function mapping histories to contexts;
 
-$Q: \mathcal{C} \times \mathcal{A} \longleftarrow \mathbb{R}$, function mapping action values in context
+$V: \mathcal{C} \times \mathcal{A} \xrightarrow{} \mathbb{R}$, function mapping action values in context;
 
-$N: \mathcal{C} \times \mathcal{A} \longleftarrow \mathbb{N}$, function counting actions in context
+$N: \mathcal{C} \times \mathcal{A} \xrightarrow{} \mathbb{N}$, function counting samples used to estimate the abstraction value, a proxy for uncertainty. 
 
 Baier, Kaisers (2021)
+
+
+# Approach - Multi Level Abstractions
+
+$V^C(c, a) = V^C(f(x, a))$, for all C in $\{identity, column, 3\times 3, global\}$
+
+![For a single state x we can estimate value over multiple abstractions. We can then choose to combine them to produce a single value estimate for state x.](images/abstractors_combined.png)
 
 
 # Approach - Non-Objective Search
@@ -134,13 +128,7 @@ via intrinsic rewards
 
 # Approach - Intrinsic Rewards 
 
-Recalling our discussion of Munchausen RL:
-
-![Pure and Mixed Intrinsic Rewards](images\intrinsic_reward.png)
-
-Intrinsic Reward can be an Optimistic Bonus term. 
-
-Non-Objective Search
+![Recall our discussion of Munchausen RL. A reward is extrinsic when it comes from the environment. A reward is intrinsic when it comes from the agent. An intrinsic reward can be mixed with extrinsic rewards as an Optimistic Bonus term.](images/intrinsic_reward.png)
 
 
 # Approach - Non-Objective Search
@@ -228,15 +216,11 @@ MEASURE: $\rho(x) = KL [p_{\theta}(Z|x) || q(Z)]$
 Kim et. al. (2019)
 
 
-# Approach - Value Function Randomization
+# Contributions - Abstraction over Novelty
+
+![Where $Q(s,a)$ is an estimation of discounted future rewards, $\mathcal{N}(s,a)$ is an estimation of discounted future novelty, using a count-based technique for estimating uncertainty about an $(s,a)$ pair. We can compute an estimate of the Novelty of a state over the multi level abstractors we hold for each context.](images/abstractors_novelty.png)
 
 
+# Contributions - Combining Abstractions
 
-# Method
-
-
-
-
-## Contribution
-
-Combining estimators
+![Here we show the tradeoff between variance and bias for abstractors with contexts of increasing size. We can use variance and bias to weigh larger contexts heavier when agents have observed fewer transitions.](images/novelty_linearly_combined.png)

@@ -48,6 +48,8 @@ Deep reinforcement learning is great with abundant resources and many samples. R
     - Abstraction over Novelty
     - Combination of Abstractions
 
+5. Discussion
+
 
 # Our ambition: Rapid RL
 
@@ -71,11 +73,7 @@ Lehman, Stanley (2011)
  
 # Deep Exploration - Sparsity
 
-An agent only learns when rewarded. 
-
-Infrequent rewards lead to infrequent learning.
-
-![Deep Sea Exploration](images/deep_sea.png){ width=75% }
+![This is the deep sea exploration environment. Because agents only learns when rewarded, infrequent rewards lead to infrequent learning.](images/deep_sea.png){ width=75% }
 
 
 # Deep Exploration - Deception
@@ -224,3 +222,11 @@ Kim et. al. (2019)
 # Contributions - Combining Abstractions
 
 ![Here we show the tradeoff between variance and bias for abstractors with contexts of increasing size. We can use variance and bias to weigh larger contexts heavier when agents have observed fewer transitions.](images/novelty_linearly_combined.png)
+
+
+# Discussion
+
+1. How else can we combine Abstractions?
+2. Can we deal with a changing environment?
+3. How does this fit in with Open Ended Learning?
+

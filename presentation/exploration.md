@@ -1,8 +1,8 @@
 ---
-title: "Deep Exploration"
-subtitle: "Challenges and solutions of reinforcement learning"
+title: "Rapid reinforcement learning"
+subtitle: "Deep exploration by novelty abstraction"
 author: \textbf{Cesare Carissimo and Michael Kaisers} -- Intelligent and Autonomous Systems research group Centrum Wiskunde & Informatica
-date: "5th March 2021"
+date: "5 March 2021"
 theme: "metropolis"
 titlegraphic: images/cwi-logo.png
 beameroption: ""
@@ -33,27 +33,28 @@ Deep reinforcement learning is great with abundant resources and many samples. R
 
 # Outline
 
-1. Our Ambition: Rapid RL 
-
+1. Our Ambition: Rapid Reinforcement Learning
 2. Why Deep Exploration is Hard
     - Sparsity
     - Deception
     - Bounded Resources
-    
 3. Approaches
     - Abstraction
     - Novelty & Variants
-    
 4. Contributions
     - Abstraction over Novelty
     - Combination of Abstractions
-
 5. Discussion
 
 
-# Our ambition: Rapid RL
+# Our Ambition: Rapid Reinforcement Learning
 
-![1) Solve this in three trajectories, 2) Explore with emergent policies of gradually increasing complexity, 3) Sample Efficient Discovery of Sparse Rewards](images/willemsen_grid.png)
+![This exploration problem is surprisingly hard for vanilla RL.](images/willemsen_grid.png)
+
+## Our ambitions
+1. Solve this in three trajectories,
+2. Explore with emergent policies of gradually increasing complexity, and finally
+3. Sample efficient discovery of sparse rewards.
 
 
 # Deep Exploration
@@ -61,16 +62,16 @@ Deep reinforcement learning is great with abundant resources and many samples. R
 Finding rewards that are:
 
  1. Sparse
- 
+
  2. Deceptive
- 
+
 with Bounded Resources.
 
 ## The Problem(s) with Objectives
 
 Lehman, Stanley (2011)
 
- 
+
 # Deep Exploration - Sparsity
 
 ![This is the deep sea exploration environment. Because agents only learns when rewarded, infrequent rewards lead to infrequent learning.](images/deep_sea.png){ width=75% }
@@ -85,13 +86,14 @@ Lehman, Stanley (2011)
 
 # Deep Exploration - Bounded Resources
 
-We can not practically rely on convergence in the limit. 
+> We can not practically rely on convergence in the limit.
 
 
-# Approach - Abstraction 
+# Approach - Abstraction
 
-![Abstraction generalisation at the cost of bias. Different abstraction contexts are possible from the identity (single cell) via local (3x3) to global contexts. Contexts over transition histories are also possible.](images/abstractors.png)
+![Abstraction generalises at the cost of bias. Abstractions levels range from the identity (single cell) via local (3x3) to global contexts. Abstract estimates may be combined based on their uncertainty and bias.](images/abstractors.png)
 
+<!-- Contexts over transition histories are also possible. -->
 
 # Approach - Abstraction
 
@@ -103,7 +105,7 @@ $f: \mathcal{H} \times \mathcal{A} \xrightarrow{} C$, function mapping histories
 
 $V: \mathcal{C} \times \mathcal{A} \xrightarrow{} \mathbb{R}$, function mapping action values in context;
 
-$N: \mathcal{C} \times \mathcal{A} \xrightarrow{} \mathbb{N}$, function counting samples used to estimate the abstraction value, a proxy for uncertainty. 
+$N: \mathcal{C} \times \mathcal{A} \xrightarrow{} \mathbb{N}$, function counting samples used to estimate the abstraction value, a proxy for uncertainty.
 
 Baier, Kaisers (2021)
 
@@ -115,32 +117,32 @@ $V^C(c, a) = V^C(f(x, a))$, for all C in $\{identity, column, 3\times 3, global\
 ![For a single state x we can estimate value over multiple abstractions. We can then choose to combine them to produce a single value estimate for state x.](images/abstractors_combined.png)
 
 
-# Approach - Non-Objective Search
+# Approach - Auxiliary-Objective Search
 
-DO NOT: pursue objective maximizing behavior
+DO NOT: pursue reward maximizing behavior
 
 DO: pursue 'novel' behavior
 
 via intrinsic rewards
 
 
-# Approach - Intrinsic Rewards 
+# Approach - Intrinsic Rewards
 
 ![Recall our discussion of Munchausen RL. A reward is extrinsic when it comes from the environment. A reward is intrinsic when it comes from the agent. An intrinsic reward can be mixed with extrinsic rewards as an Optimistic Bonus term.](images/intrinsic_reward.png)
 
 
-# Approach - Non-Objective Search
+# Approach - Auxiliary-Objective Search
 
 > Criticism: internal reward just another objective
 
-> Rebuttal: novelty rewards are based on past behaviors and mostly orthogonal to objective rewards
+> Rebuttal: novelty rewards are based on past behaviors and mostly orthogonal to external rewards
 
 Lehman, Stanley (2011)
 
 Best when always changing, non-stationary, diverging.
 
 
-# Approach - Count Based Exploration 
+# Approach - Count Based Exploration
 
 SUBJECT: $\{f_i\}_{i \in M, t}:$ features
 
@@ -151,7 +153,7 @@ Count occurrences of features and construct a density model for the learned feat
 Martin et. al. (2017)
 
 
-# Approach - Novelty 
+# Approach - Novelty
 
 > New is not always Interesting, but Interesting is always New.  
 
@@ -159,27 +161,27 @@ SUBJECT: $x:$ behavior
 
 MEASURE: $\rho(x) = \frac{1}{k} \sum_{i=0}^k dist(x,\mu_i)$
 
-The average distance of a behavior to its k-nearest behaviors. 
+The average distance of a behavior to its k-nearest behaviors.
 
-Lehman, Stanley (2011) 
+Lehman, Stanley (2011)
 
 Video: [Novelty-Biped](https://www.youtube.com/watch?v=dXQPL9GooyI&t=120s)
 
 
-# Approach - Diversity Driven RL 
+# Approach - Diversity Driven RL
 
 SUBJECT: $\pi:$ policy
 
 MEASURE: $L_D = L - E_{\pi'\in\Pi} [\alpha D(\pi, \pi')]$
 
-The difference of a policy to other policies stored in memory. 
+The difference of a policy to other policies stored in memory.
 
-$D$ could be KL divergence, MSE, L2-norm ... 
+$D$ could be KL divergence, MSE, L2-norm ...
 
 Hong et. al. (2018)
 
 
-# Approach - Curiosity 
+# Approach - Curiosity
 
 SUBJECT: $\pi:$ policy
 
@@ -190,7 +192,7 @@ Mean squared error against a fixed variance gaussian density.
 Burda et. al. (2018)
 
 
-# Approach - Approximating Novelty 
+# Approach - Approximating Novelty
 
 When behavior space is intractable, continuous, multidimensional: LARGE
 
@@ -201,7 +203,7 @@ MEASURE: $\rho(x) = \frac{1}{k} \sum_{i=0}^k dist(x,\mu_i)$
 Ramamurthy et. al. (2020)
 
 
-# Approach - Curiosity Bottleneck 
+# Approach - Curiosity Bottleneck
 
 > Noisy-TV Problem: Pure randomness is always novel, and truly un-interesting
 
@@ -229,4 +231,3 @@ Kim et. al. (2019)
 1. How else can we combine Abstractions?
 2. Can we deal with a changing environment?
 3. How does this fit in with Open Ended Learning?
-

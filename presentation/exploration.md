@@ -138,6 +138,8 @@ Recalling our discussion of Munchausen RL:
 
 ![Pure and Mixed Intrinsic Rewards](images\intrinsic_reward.png)
 
+Intrinsic Reward can be an Optimistic Bonus term. 
+
 Non-Objective Search
 
 

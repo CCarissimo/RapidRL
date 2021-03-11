@@ -11,6 +11,7 @@ class Agent:
         self.buffer = buffer
         self.targets = targets
         self.counter = counter
+        self.action_selection = None
 
     def select_action(self, transition):
         self.process_state_estimators(transition)
@@ -25,8 +26,9 @@ class Agent:
             self.store_trajectory(self.trajectory, T)
 
     def process_state_estimators(self, transition):
-        if self.buffer.size > self.batch_size:
+        if self.buffer.size >= self.batch_size:
             S = self.buffer.sample(self.batch_size)
+            # S = [self.buffer.buffer[self.buffer.index - 1]]
             for E in self.estimators:
                 E.update(S)
 
@@ -54,8 +56,49 @@ class Agent:
 
 class Greedy(Agent):
     def combine_state_estimators(self, transition):
+        # picks actions by maximising a random estimator
         maximizing_actions = []
         for E in self.estimators:
             action_values = E.evaluate(transition)
-            maximizing_actions.append(max(action_values, key=action_values.get))
-        return maximizing_actions[np.random.randint(len(maximizing_actions))]
+            max_value = max(action_values.values())
+            max_actions = [k for k, v in action_values.items() if v == max_value]
+            maximizing_actions.append(np.random.choice(max_actions))
+        return np.random.choice(maximizing_actions)
+
+
+class QGreedyNoveltor(Agent):
+    def combine_state_estimators(self, transition):
+        # Epsilon Greedy Action Selection based on Q values
+        if np.random.random() > 1 - self.epsilon:
+            action = self.actions[np.random.randint(self.n_actions)]
+        else:
+            Qs = self.estimators[1].evaluate(transition)
+            max_value = max(Qs.values())
+            max_actions = [k for k, v in Qs.items() if v == max_value]
+            action = np.random.choice(max_actions)
+        return action
+
+
+class GlobalNoveltor(Agent):
+    def combine_state_estimators(self, transition):
+        if self.action_selection == "novelty":
+            # action selection solely based on global abstractor
+            ANg = self.estimators[2]
+            ng = ANg.evaluate(transition)
+            max_value = max(ng.values())
+            max_actions = [k for k, v in ng.items() if v == max_value]
+            action = np.random.choice(max_actions)
+            # print(ng)
+            # print(action)
+        elif self.action_selection == "greedy":
+            # Epsilon Greedy Action Selection based on Q values
+            if np.random.random() > 1 - self.epsilon:
+                action = self.actions[np.random.randint(self.n_actions)]
+            else:
+                Qs = self.estimators[0].evaluate(transition)
+                max_value = max(Qs.values())
+                max_actions = [k for k, v in Qs.items() if v == max_value]
+                action = np.random.choice(max_actions)
+                # print(Qs)
+                # print(action)
+        return action

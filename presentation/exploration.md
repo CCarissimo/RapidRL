@@ -17,6 +17,7 @@ export_on_save:
   pandoc: true
 header-includes:
   - \usepackage{bm}
+  - \usepackage{bbm}
   - \usepackage[normalem]{ulem}
   - \usepackage{mathpazo}\usepackage{ragged2e}
   - \usepackage{framed}\usepackage{xcolor}\colorlet{shadecolor}{black!10}
@@ -224,6 +225,74 @@ Kim et. al. (2019)
 # Contributions - Combining Abstractions
 
 ![Here we show the tradeoff between variance and bias for abstractors with contexts of increasing size. We can use variance and bias to weigh larger contexts heavier when agents have observed fewer transitions.](images/novelty_linearly_combined.png)
+
+
+# Method - Estimation
+
+We estimate and store discounted future expectations for Reward and Novelty values. Both ground estimates can be abstracted over. 
+
+Both estimates are updated with a bellman like equation:
+
+$Q(s,a) = Q(s,a) + \alpha(r + \gamma (V(s')))$, where $Q(s,a)$ is the action-value function $V(s)$ is the state-value function.
+
+All abstractions of the same estimate use the same targets to update.  
+
+
+# Method - Estimation
+
+The bellman update is optimal if the values we would like to estimate have optimal substructure, that is we assume that we can write the value of our decision problem as a recursive specification over the value induced by our current action from a given state and the value of the next state. 
+
+$V(x_o) = \max_{\{a_t\}_{t=0}^{\inf}}\sum_{t=0}^{\inf}\beta^t F(x_t, a_t)$, where $F(x_t, a_t)$ is the reward 
+
+NB: While environment rewards are fixed, novelty rewards change in relation to experience; returning to a state x that had novelty $n_t$ at will be less novel, $n_{t+\tau} < n_t$. Therefore, for novelty the optimal state-value function is non-stationary. 
+
+
+# Method - Estimation 
+
+$N: \mathcal{S} \times \mathcal{A} \xrightarrow{} \mathbb{N}$, (s,a) pair observation counter
+
+'Knownness' is approximated as $K(s,a) = \frac{1}{N(s,a)}$. We then use knownness as the learning rate for estimating expected future rewards. We further estimate future learning by using K as a reward for our second estimator. 
+  
+## Expected Sum of Discounted Future Rewards 
+
+$Q(s,a) = Q(s,a) + K(s,a) [r + \gamma(\max_{a'}Q(s',a') - Q(s,a))]$
+
+## Expected Sum of Discounted Sum of Future Learning 
+
+$\mathcal{N}(s,a) = \mathcal{N}(s,a) + \alpha [K(s,a) + \gamma(\max_{a'}\mathcal{N}(s',a') - \mathcal{N}(s,a))]$
+
+
+# Method - Action Selection 
+
+Our action selection design must follow some main principles:
+
+1. start: 
+    - with simple policies
+    - by prioritising exploration
+    
+2. as experience increases:
+    - increase policy complexity
+    - shift priority towards exploitation
+
+When confronted with the unknown we want our agent to envision a hypothesis, test it and update its beliefs. On the other hand, when confronted with the 'known' we want our agent to consider acting greedily.
+
+
+# Method - Action Selection 
+
+![To achieve our goal of solving this environment in a few trajectories we expect only the global and identity abstractors to be sufficient. So in the next slide we will only consider how to balance the (s,a) estimate and the global estimate of novelty in exploration.](images/abstractor_global_identity.png)
+
+
+# Method - Action Selection 
+
+As first step we simplify our problem as a two phase process, and will only consider Novelty estimates. 
+
+Phase 1. Explore using novelty. If in an unseen state use the global abstractor. If in a seen state apply a \textbf{non-greedy} and \textbf{optimistic} strategy on the action-value estimates.
+
+$\pi^1(s) = \mathbbm{1}{\{\max_{a}N(s,a) > 0\}} arg\max_{a}\mathcal{N}(s,a) + \mathbbm{1}{\{\max_{a}N(s,a) = 0\}} arg\max_{a}\mathcal{N}^{global}(a)$
+
+Phase 2. Exploit using novelty. Pick the maximum action-value estimate in each state.  
+
+$\pi^2(s) = arg\max_{a}\mathcal{N}(s,a)$
 
 
 # Discussion

@@ -47,6 +47,12 @@ class arrival_state(Mask):
         return context
 
 
+class global_context(Mask):
+    def apply(self, transition):
+        context = 0
+        return context
+
+
 class Approximator(ABC):
     def __init__(self):
         pass
@@ -120,8 +126,17 @@ class bellman_N_table(bellman_Q_table):
         super().__init__(alpha=alpha, gamma=gamma)
         self.table = defaultdict(lambda: {a: 1 for a in self.actions})
 
+    def update_table(self, t):
+        if t.terminal:
+            self.table[t.state_] = {a: 0 for a in self.actions}
+
     def update_value(self, t):
-        self.table[t.state][t.action] = self.table[t.state][t.action] + self.alpha * (1/t.N_ca + self.gamma * max(
+        if t.terminal:
+            novelty_reward = 0
+        else:
+            novelty_reward = 1/t.N_ca
+
+        self.table[t.state][t.action] = self.table[t.state][t.action] + self.alpha * (novelty_reward + self.gamma * max(
             v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
 
 

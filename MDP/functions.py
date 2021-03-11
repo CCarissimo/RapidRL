@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.patches as patches
 from collections import defaultdict
+import math
 
 
 # For (s,a), find the cumulative discounted sum of rewards over a set of trajectories
@@ -125,14 +126,17 @@ def run_trajectory(env, agent, epsilon, abstract=False):
     agent.epsilon = epsilon
     agent.abstract = abstract
 
+    G = []
     while not env.terminal:
         action = agent.select_action(env.transition)
-
+        # print(agent.estimators[1].approximator.table)
         transition = env.step(action)
 
         agent.observe(transition)
 
-    return agent.trajectory
+        G.append(transition.reward)
+
+    return agent.trajectory, G
 
 
 def generate_codes(verts):
@@ -169,7 +173,7 @@ def action_abstraction(sa_values_table, state_dist_table):
     states = list(sa_values_table.keys())
     arbitrary_state = states[0]
     action_keys = sa_values_table[arbitrary_state].keys()
-    abstraction = {}
+    abstraction = defaultdict(lambda: 0)
     for action in action_keys:
         if action in abstraction.keys():
             pass
@@ -194,7 +198,7 @@ def action_abstraction_bias(sa_values_table, a_abstraction_table):
 
 def generate_heatmap(grid, table, aggf=None, actions=False):
     if actions:
-        hm = np.zeros((3,3))
+        hm = np.ones((3,3)) * math.ceil(min(v for v in table[0].values()))
         if aggf is None:
             aggf = lambda x: x
 

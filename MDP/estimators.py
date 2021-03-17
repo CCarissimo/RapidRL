@@ -133,6 +133,8 @@ class bellman_N_table(bellman_Q_table):
     def update_value(self, t):
         if t.terminal:
             novelty_reward = 0
+        elif t.state == t.state_:
+            novelty_reward = 0
         else:
             novelty_reward = 1/t.N_ca
 

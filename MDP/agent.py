@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Agent:
     def __init__(self, estimators, buffer, targets, counter, batch_size=1):
         self.actions = ['up', 'down', 'left', 'right']
@@ -12,6 +13,7 @@ class Agent:
         self.targets = targets
         self.counter = counter
         self.action_selection = None
+        self.train = True
 
     def select_action(self, transition):
         self.process_state_estimators(transition)
@@ -19,16 +21,16 @@ class Agent:
         return action
 
     def observe(self, transition):
-        self.trajectory.append(transition)
-        self.update_counter(transition)
-        if transition.terminal:
-            T = self.compute_trajectory_targets(self.trajectory)
-            self.store_trajectory(self.trajectory, T)
+        if self.train:
+            self.trajectory.append(transition)
+            self.update_counter(transition)
+            if transition.terminal:
+                T = self.compute_trajectory_targets(self.trajectory)
+                self.store_trajectory(self.trajectory, T)
 
     def process_state_estimators(self, transition):
-        if self.buffer.size >= self.batch_size:
+        if self.train and self.buffer.size >= self.batch_size:
             S = self.buffer.sample(self.batch_size)
-            # S = [self.buffer.buffer[self.buffer.index - 1]]
             for E in self.estimators:
                 E.update(S)
 
@@ -82,14 +84,22 @@ class QGreedyNoveltor(Agent):
 class GlobalNoveltor(Agent):
     def combine_state_estimators(self, transition):
         if self.action_selection == "novelty":
-            # action selection solely based on global abstractor
-            ANg = self.estimators[2]
-            ng = ANg.evaluate(transition)
-            max_value = max(ng.values())
-            max_actions = [k for k, v in ng.items() if v == max_value]
-            action = np.random.choice(max_actions)
-            # print(ng)
-            # print(action)
+            Ns = self.estimators[1]
+            if transition.state_ in Ns.approximator.table:
+                # action selection based on state action values
+                ns = Ns.evaluate(transition)
+                max_value = max(ns.values())
+                max_actions = [k for k, v in ns.items() if v == max_value]
+                action = np.random.choice(max_actions)
+            else:
+                # action selection solely based on global abstractor
+                ANg = self.estimators[2]
+                ng = ANg.evaluate(transition)
+                max_value = max(ng.values())
+                max_actions = [k for k, v in ng.items() if v == max_value]
+                action = np.random.choice(max_actions)
+                # print(ng)
+                # print(action)
         elif self.action_selection == "greedy":
             # Epsilon Greedy Action Selection based on Q values
             if np.random.random() > 1 - self.epsilon:

@@ -35,7 +35,7 @@ class ReplayMemory:
         self.index = (self.index + 1) % self.max_size
 
     def sample(self, batch_size):
-        indices = sample(range(self.size), batch_size)
+        indices = sample(range(self.size), batch_size-1)
         S = [self.buffer[index] for index in indices]
-        # S = [self.buffer[self.index-1]]
+        S.append(self.buffer[self.index-1])
         return S

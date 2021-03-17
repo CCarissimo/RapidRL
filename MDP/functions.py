@@ -120,13 +120,13 @@ def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None,
     return fig, ax, im, cb
 
 
-def run_trajectory(env, agent, epsilon, abstract=False):
+def run_trajectory(env, agent, epsilon):
     env.reset()
     agent.reset_trajectory()
     agent.epsilon = epsilon
-    agent.abstract = abstract
 
     G = []
+    steps = 0
     while not env.terminal:
         action = agent.select_action(env.transition)
         # print(agent.estimators[1].approximator.table)
@@ -135,8 +135,9 @@ def run_trajectory(env, agent, epsilon, abstract=False):
         agent.observe(transition)
 
         G.append(transition.reward)
+        steps += 1
 
-    return agent.trajectory, G
+    return agent.trajectory, G, steps
 
 
 def generate_codes(verts):

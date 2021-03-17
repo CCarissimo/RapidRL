@@ -93,9 +93,17 @@ class Gridworld(Env, ABC):
 
         return copy.deepcopy(self.transition)
 
+    def set(self, state: tuple):
+        self.transition = Transition(state=state, action='initialize', state_=state,
+                                     reward=self.grid[state],
+                                     terminal=False, targets=None)
+        self.terminal = False
+        self.step_counter = 0
+        return copy.deepcopy(self.transition)
+
     def reset(self):
-        self.transition = Transition(state=self.initial_state, action='initialize', state_=tuple(self.initial_state),
-                                     reward=self.grid[tuple(self.initial_state)],
+        self.transition = Transition(state=self.initial_state, action='initialize', state_=self.initial_state,
+                                     reward=self.grid[self.initial_state],
                                      terminal=False, targets=None)
         self.terminal = False
         self.step_counter = 0

@@ -295,6 +295,65 @@ Phase 2. Exploit using novelty. Pick the maximum action-value estimate in each s
 $\pi^2(s) = arg\max_{a}\mathcal{N}(s,a)$
 
 
+# Method - Combining Rewards
+
+An alternative approach to a phased action selection is to combine rewards. We have an extrinsic reward $r^e$ given by the environment rewards, and an intrinsic reward $r^i$ given by knownness scores. First off we must decide how to combine these rewards. We can combine rewards into one as $r = r^e + r^i$, possibly including weights for each term. We can imagine creating a much more complicated reward that combines several intrinsic rewards: 
+
+$$r = r^e + r^{\text{identity}} + r^{\text{column}} + \dots + r^{\text{global}}$$
+
+Alternatively we can hold separate estimators for each reward. In the case of abstractions over rewards we may only need to estimate the action value function which we can then use to estimate our abstractions. What I would like to show next is that these two approaches are distinct, and that even if we combine our estimates when we select our actions in the same way as we combine the rewards in the other method we do not have equivalent processes. 
+
+
+# Method - Value Functions
+
+Consider the value function $V_{\pi}(s) = E_{\pi}[G_t|S_t=s]$ where $G_t = \sum_{k=0}^{T-t-1} \gamma^k R_{t+k+1}$ is the discounted sum of future rewards. 
+
+If we combine our rewards $r^c = r^e + r^i$, we get the following expansion for our value function:
+
+$$V_{\pi}^c(s) = \sum_{a}\pi(a|s)\sum_{s',r^e,r^i}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma V_{\pi}(s')]$$
+
+
+# Method - Value Functions
+
+On the other hand, if we keep two separate estimates for intrinsic and extrinsic rewards:
+
+$$V_{\pi}^e(s) = \sum_{a}\pi(a|s)\sum_{s',r^e}p(s',r^e|s,a)[r^e + \gamma V_{\pi}^e(s')]$$
+$$V_{\pi}^i(s) = \sum_{a}\pi(a|s)\sum_{s',r^i}p(s',r^i|s,a)[r^i + \gamma V_{\pi}^i(s')]$$
+
+we can then ask, does $V_{\pi}^c = V_{\pi}^e + V_{\pi}^i$ ?
+
+<!--$$V_{\pi}^e + V_{\pi}^i = \sum_{a}\pi(a|s)\sum_{s',r^e,r^e}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma (V_{\pi}^e(s') + V_{\pi}^i(s'))]$$-->
+
+
+# Method - Value Functions
+
+Given, $R_{t+1} = R^e_{t+1} + R^i_{t+1}$, then:
+
+$$V_{\pi}^c(s) = E[G_t|S_t = s] = E[\sum_{k=0}^{T-t-1} \gamma^k R_{t+k+1}|S_t = s]$$
+
+$$= E[\sum_{k=0}^{T-t-1} \gamma^k R^e_{t+k+1} + R^i_{t+k+1}|S_t = s]$$
+
+$$= E[\sum_{k=0}^{T-t-1} \gamma^k R^e_{t+k+1} + \sum_{k=0}^{T-t-1} \gamma^k R^i_{t+k+1}|S_t = s]$$
+
+
+# Method - Value Functions
+
+by linearity of expectation,
+
+$$= E[\sum_{k=0}^{T-t-1} \gamma^k R^e_{t+k+1}|S_t = s] + E[\sum_{k=0}^{T-t-1} \gamma^k R^i_{t+k+1}|S_t = s]$$
+
+$$= (V_{\pi}^e(s) + V_{\pi}^i(s))$$
+
+So there we have it. If we linearly combine the estimators it does not matter whether we combine the rewards or the estimates. What is of course important that we are using the same policy, which is the case because we end up combining the estimates after we have updated them separately. 
+
+If we were to do any kind of non-linear $f$ combination for which we can not factorize $f(r_e, r_i)$ this equivalence does not hold. 
+
+
+# Method - Value Functions
+
+
+
+
 # Discussion
 
 1. How else can we combine Abstractions?

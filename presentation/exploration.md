@@ -295,7 +295,7 @@ Phase 2. Exploit using novelty. Pick the maximum action-value estimate in each s
 $\pi^2(s) = arg\max_{a}\mathcal{N}(s,a)$
 
 
-# Method - Combining Rewards
+# Theory - Combining Rewards
 
 An alternative approach to a phased action selection is to combine rewards. We have an extrinsic reward $r^e$ given by the environment rewards, and an intrinsic reward $r^i$ given by knownness scores. First off we must decide how to combine these rewards. We can combine rewards into one as $r = r^e + r^i$, possibly including weights for each term. We can imagine creating a much more complicated reward that combines several intrinsic rewards: 
 
@@ -304,7 +304,7 @@ $$r = r^e + r^{\text{identity}} + r^{\text{column}} + \dots + r^{\text{global}}$
 Alternatively we can hold separate estimators for each reward. In the case of abstractions over rewards we may only need to estimate the action value function which we can then use to estimate our abstractions. What I would like to show next is that these two approaches are distinct, and that even if we combine our estimates when we select our actions in the same way as we combine the rewards in the other method we do not have equivalent processes. 
 
 
-# Method - Value Functions
+# Theory - Combining State-Value Functions
 
 Consider the value function $V_{\pi}(s) = E_{\pi}[G_t|S_t=s]$ where $G_t = \sum_{k=0}^{T-t-1} \gamma^k R_{t+k+1}$ is the discounted sum of future rewards. 
 
@@ -313,7 +313,7 @@ If we combine our rewards $r^c = r^e + r^i$, we get the following expansion for 
 $$V_{\pi}^c(s) = \sum_{a}\pi(a|s)\sum_{s',r^e,r^i}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma V_{\pi}(s')]$$
 
 
-# Method - Value Functions
+# Theory - Combining State-Value Functions
 
 On the other hand, if we keep two separate estimates for intrinsic and extrinsic rewards:
 
@@ -325,7 +325,7 @@ we can then ask, does $V_{\pi}^c = V_{\pi}^e + V_{\pi}^i$ ?
 <!--$$V_{\pi}^e + V_{\pi}^i = \sum_{a}\pi(a|s)\sum_{s',r^e,r^e}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma (V_{\pi}^e(s') + V_{\pi}^i(s'))]$$-->
 
 
-# Method - Value Functions
+# Theory - Combining State-Value Functions
 
 Given, $R_{t+1} = R^e_{t+1} + R^i_{t+1}$, then:
 
@@ -336,7 +336,7 @@ $$= E[\sum_{k=0}^{T-t-1} \gamma^k R^e_{t+k+1} + R^i_{t+k+1}|S_t = s]$$
 $$= E[\sum_{k=0}^{T-t-1} \gamma^k R^e_{t+k+1} + \sum_{k=0}^{T-t-1} \gamma^k R^i_{t+k+1}|S_t = s]$$
 
 
-# Method - Value Functions
+# Theory - Combining State-Value Functions
 
 by linearity of expectation,
 
@@ -349,9 +349,58 @@ So there we have it. If we linearly combine the estimators it does not matter wh
 If we were to do any kind of non-linear $f$ combination for which we can not factorize $f(r_e, r_i)$ this equivalence does not hold. 
 
 
-# Method - Value Functions
+# Theory - Combining State-Value Functions
+
+I reiterate here that the reason why this equivalence holds for value functions is that we are using the same policy in both cases, where the policy itself is over the combination of estimators. What I mean is that the update of the state value function for extrinsic and intrinsic rewards is done using the same policy for the one-step lookahead target as we do when updating the single state value function. 
+
+We can see how we get intro trouble with this when we do not have the value function, and must estimate it using action-value functions. 
 
 
+# Theory - Combining Q Functions
+
+Consider $Q_{\pi}^c(s,a) = \sum_{s',r^e,r^i}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma V_{\pi}(s')]$ as the action-value function for the combined reward $r=r^e + r^i$. Since we do not know the state-value function $V_{\pi}$ we, assume we will update with respect to the greedy policy $\pi(a) = arg \max_{a} Q_{\pi}(s,a)$, and rewrite as:
+
+$$ Q_{\pi}^c(s,a) = \sum_{s',r^e,r^i}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma \max_{a'} Q_{\pi}(s',a')] $$
+ 
+
+# Theory - Combining Q Functions
+
+All math works out very similarly as for state-value functions when we consider holding two separate estimates for extrinsic and intrinsic rewards and combining then after the update, but for one big difference:
+
+$$Q^c_{\pi}(s,a) = Q^e_{\pi}(s,a) + Q^i_{\pi}(s,a)$$
+$= \sum_{s',r^e}p(s',r^e|s,a)[r^e + \gamma \max_{a'} Q^e_{\pi}(s',a')] + \sum_{s',r^i}p(s',r^i|s,a)[r^i + \gamma \max_{a'} Q^i_{\pi}(s',a')]$
+$$= \sum_{s',r^e,r^i}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma (\max_{a'} Q^e_{\pi}(s',a') + \max_{a'} Q^i_{\pi}(s',a'))]$$
+
+
+# Theory - Combining Q Functions
+
+Recall the last line of the previous slide: 
+$$\sum_{s',r^e,r^i}p(s',r^e,r^i|s,a)[r^e + r^i + \gamma (\max_{a'} Q^e_{\pi}(s',a') + \max_{a'} Q^i_{\pi}(s',a'))]$$
+
+which is only equal to $Q_{\pi}(s,a)$ if 
+
+$$\max_{a}[Q_{\pi}(s',a')] = \max_{a'} Q^e_{\pi}(s',a') + \max_{a'} Q^i_{\pi}(s',a')$$ 
+$$\max_{a}[Q^e_{\pi}(s',a') + Q^i_{\pi}(s',a')] = \max_{a'} Q^e_{\pi}(s',a') + \max_{a'} Q^i_{\pi}(s',a')$$ 
+
+
+# Theory - Combining Q Functions 
+Generally:
+$$\max_{a}[Q^e_{\pi}(s',a') + Q^i_{\pi}(s',a')] <= \max_{a'} Q^e_{\pi}(s',a') + \max_{a'} Q^i_{\pi}(s',a')$$ 
+
+with equivalence only if we pick an action a for our separate intrinsic and extrinsic updates that maximises both metrics simultaneously. 
+
+Maintaining two separate estimates while running policy improvements can lead us to a situation where the greedy policy with resect to the different rewards results in two different actions $a_e \neq a_i$. We may thus overestimate the value of a state with respect to the greedy policy of the combined rewards. This also results in off-policy learning, since the polices we use to update may differ from the ones we use to act. 
+
+
+# Theory - Linear Combination of $V_{\pi}$
+
+Consider a more general case of combination where we combine our rewards with a weight vector $\lambda$. 
+
+$$V^c_{\pi}(s) = \lambda^T \vec{V} = \sum_{i \in \lambda} \lambda_i V^i_{\pi}(s)$$
+$$= \sum_{i \in \lambda} \lambda_i E_{\pi}[G_t|S_t=s] =  \sum_{i \in \lambda} E_{\pi}[\lambda_i G_t|S_t=s]$$
+$=  E_{\pi}[\sum_{i \in \lambda} \lambda_i G_t|S_t=s] = V_{\pi}(s)$$
+
+when $R_t = \lambda^T \vec(R)$.
 
 
 # Discussion

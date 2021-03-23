@@ -403,6 +403,53 @@ $=  E_{\pi}[\sum_{i \in \lambda} \lambda_i G_t|S_t=s] = V_{\pi}(s)$$
 when $R_t = \lambda^T \vec(R)$.
 
 
+# Theory - Potential Based Reward Shaping 
+
+Given an MDP $M = (S, A, T, \gamma, R)$, consider running a dynamic programming routine to find an optimal policy on the transformed MDP $M'$ where $R' = R + F$ and $F: S \times A \xrightarrow{} \mathbb{R}$ is a bounded real-valued function. 
+
+Theorem: Let any $S, A, \gamma$ and reward shaping function $F$, $F$ is a PBRS function if \exists \Phi:S \xrightarrow{} \mathbb{R} s.t. \forall s \in S = \{s_0\}, a\in A, s' \in S, 
+$$F(s,a,s') = \gamma\Phi(s') - \Phi(s),$$
+
+then \textbf{Sufficient} (every optimal policy in M is optimal in M' and v.v.)
+
+and \textbf{Necessary} (if F not PBRS, then there exist a T and R s.t. no optimal policy in M' is optimal in M).
+
+
+# Theory - PBRS Proof 1/3
+
+Let F be a PBRS function. 
+
+For M, $Q^*_M(s,a) = E_{s'}[R(s,a,s') + \gamma \max_{a'} Q^*_M(s',a')]$
+
+with $-\Phi(s) = \gamma \Phi(s') - \Phi(s) - \gamma\Phi(s')$
+
+For M, $Q^*_M(s,a) - \Phi(s) = E_{s'}[R(s,a,s') + \gamma\Phi(s') - Phi(s) + \gamma \max_{a'} (Q^*_M(s',a') - \Phi(s'))]$
+
+
+# Theory - PBRS Proof 2/3
+
+define $\hat{Q}_{M'}(s,a) = Q^*_M(s,a) - \Phi(s)$, then 
+
+$$$\hat{Q}_{M'}(s,a) = E_{s'}[R(s,a,s') + \gamma\Phi(s') - Phi(s) + \gamma \max_{a'} \hat{Q}_{M'}(s',a')]$$$
+
+$$= E_{s'}[R(s,a,s') + F(s,a,s') + \gamma \max_{a'} \hat{Q}_{M'}(s',a')]$$
+
+which is the Bellman Equation. 
+
+
+# Theory - PBRS Proof 3/3
+
+W.l.o.g.: $\Phi(s_0) = 0$ so $\hat{Q}_{M'}(s,a) = Q^*_{M}(s,a) - \Phi(s_0) = 0 - 0 = 0$, and $\hat{Q}_{M'}(s,a)$ satisfies the Bellman Equation. 
+
+so, $Q^*_{M'}(s,a) = \hat{Q}_{M'}(s,a) = Q^*_{M}(s,a) - \Phi(s)$, and for
+
+$$\pi^*_{M'} \in arg \max_{a} \hat{Q}_{M'}(s,a)$$
+$$= arg \max_{a} \hat{Q}^*_{M}(s,a) - \Phi(s)$$
+$$= arg \max_{a} \hat{Q}^*_{M}(s,a)$$
+
+Q.E.D.
+
+
 # Discussion
 
 1. How else can we combine Abstractions?

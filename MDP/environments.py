@@ -52,6 +52,7 @@ class Gridworld(Env, ABC):
         self.step_counter = 0
         self.max_steps = max_steps
         self.terminal = False
+        self.timeout = False
         self.transition = Transition(state=self.initial_state,
                                      action='initialize',
                                      state_=self.initial_state,
@@ -84,7 +85,7 @@ class Gridworld(Env, ABC):
                 self.terminal = True
 
         if self.step_counter == self.max_steps:
-            self.terminal = True
+            self.timeout = True
 
         self.transition = Transition(state=self.transition.state_, action=action, state_=state_, reward=reward,
                                      terminal=self.terminal, targets=None)

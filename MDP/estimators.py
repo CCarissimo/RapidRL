@@ -111,6 +111,16 @@ class bellman_Q_table(table):
             v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
 
 
+class bellman_RMax(bellman_Q_table):
+    def __init__(self, alpha, gamma):
+        super().__init__(alpha=alpha, gamma=gamma)
+        self.table = defaultdict(lambda: {a: 1 for a in self.actions})
+
+    def update_value(self, t):
+        self.table[t.state][t.action] = self.table[t.state][t.action] + self.alpha * (t.reward + self.gamma * max(
+            v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
+
+
 class bQt_novel_alpha(table):
     def __init__(self, gamma):
         super().__init__()

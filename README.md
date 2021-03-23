@@ -7,3 +7,7 @@ This repository is used to store code worked on for a project with the CWI. The 
 RL-intro-task folder contains functions and scripts for a simple RL abstraction task. A single agent operates in a simple 2D gridworld.
 
 Link to the overleaf https://www.overleaf.com/project/5fcbc0e6c47c2fc0475ba5b9 
+
+## Work
+
+See Task-Log.md for an up to date list of tasks underway and potential tasks.

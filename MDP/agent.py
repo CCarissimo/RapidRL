@@ -68,6 +68,42 @@ class Greedy(Agent):
         return np.random.choice(maximizing_actions)
 
 
+class LambChop(Agent):
+    def combine_state_estimators(self, transition):
+        lam = np.zeros((self.n_actions, len(self.estimators)))
+        Q = np.zeros((self.n_actions, len(self.estimators)))
+
+        for a, A in enumerate(self.actions):
+            n = np.zeros(len(self.estimators))
+            b = np.zeros(len(self.estimators))
+            Q_sa = self.estimators[0].evaluate(transition)[A]
+            for e, E in enumerate(self.estimators):
+                n[e] = E.get_visits(transition)[A]
+                Q[a, e] = E.evaluate(transition)[A]
+                b[e] = Q[a, e] - Q_sa
+
+            # here where I check whether nb is 0 there may be a weird interaction with the initialized values
+            # since when we calculate bias for an unseen state we initialize the value of the unseen q to 0
+            nb = n + b ** 2
+            Zigma = np.where(nb > 0, 1 / n, 0.1)  # Zigma is the Inverse of the Sigma MSE matrix
+            den = np.sum(Zigma)
+            lam[a] = Zigma / den
+
+        lamQ = np.sum(lam * Q, axis=1)
+
+        if self.action_selection == 'greedy':
+            a = np.random.choice(np.argwhere(lamQ == np.max(lamQ)).flatten())
+            action = self.actions[int(a)]
+
+        elif self.action_selection == 'exploratory':
+            exp_bonus = np.sqrt(np.sum((lam * Q) ** 2, axis=1))
+            lamQ = lamQ + exp_bonus
+            a = np.random.choice(np.argwhere(lamQ == np.max(lamQ)).flatten())
+            action = self.actions[int(a)]
+
+        return action
+
+
 class QGreedyNoveltor(Agent):
     def combine_state_estimators(self, transition):
         # Epsilon Greedy Action Selection based on Q values

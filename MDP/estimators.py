@@ -21,6 +21,11 @@ class Estimator:
             transition.N_ca = self.visits[transition.context][transition.action]
         self.approximator.update(buffer_sample)
 
+    def get_visits(self, transition):
+        context = self.mask.apply(transition)
+        transition.context = context
+        return self.visits[transition.context]
+
     def count_visits(self, transition):
         context = self.mask.apply(transition)
         transition.context = context

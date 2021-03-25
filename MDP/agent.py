@@ -84,13 +84,16 @@ class LambChop(Agent):
 
             # here where I check whether nb is 0 there may be a weird interaction with the initialized values
             # since when we calculate bias for an unseen state we initialize the value of the unseen q to 0
-            nb = n + b ** 2
-            Zigma = np.where(nb > 0, 1 / n, 0.1)  # Zigma is the Inverse of the Sigma MSE matrix
+            Sigma = n + b ** 2 # this is just the diagonals of the MSE matrix
+            Zigma = np.where(Sigma > 0, 1 / Sigma, 0.1)  # Zigma is the Inverse of the Sigma MSE matrix
             den = np.sum(Zigma)
             lam[a] = Zigma / den
 
         lamQ = np.sum(lam * Q, axis=1)
 
+        # check that lam sums to 1
+        # print(np.sum(lam, axis=1))
+        
         if self.action_selection == 'greedy':
             a = np.random.choice(np.argwhere(lamQ == np.max(lamQ)).flatten())
             action = self.actions[int(a)]

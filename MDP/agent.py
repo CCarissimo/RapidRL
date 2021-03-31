@@ -13,30 +13,24 @@ class Agent:
         self.targets = targets
         self.counter = counter
         self.action_selection = None
-        self.train = True
 
     def select_action(self, transition):
-        self.process_state_estimators(transition)
-        action = self.combine_state_estimators(transition)
+        action = self.actions[np.random.randint(self.n_actions)]
         return action
 
     def observe(self, transition):
-        if self.train:
-            self.trajectory.append(transition)
-            self.update_counter(transition)
-            if transition.terminal:
-                T = self.compute_trajectory_targets(self.trajectory)
-                self.store_trajectory(self.trajectory, T)
+        self.trajectory.append(transition)
+        self.update_counter(transition)
+        self.buffer.append(transition)
+        # if transition.terminal:
+        #     T = self.compute_trajectory_targets(self.trajectory)
+        #     self.store_trajectory(self.trajectory, T)
 
-    def process_state_estimators(self, transition):
-        if self.train and self.buffer.size >= self.batch_size:
+    def train(self):
+        if self.buffer.size >= self.batch_size:
             S = self.buffer.sample(self.batch_size)
             for E in self.estimators:
                 E.update(S)
-
-    def combine_state_estimators(self, transition):
-        action = self.actions[np.random.randint(self.n_actions)]
-        return action
 
     def update_counter(self, transition):
         self.counter.update_table(transition)
@@ -57,7 +51,7 @@ class Agent:
 
 
 class Greedy(Agent):
-    def combine_state_estimators(self, transition):
+    def select_action(self, transition):
         # picks actions by maximising a random estimator
         maximizing_actions = []
         for E in self.estimators:
@@ -68,8 +62,29 @@ class Greedy(Agent):
         return np.random.choice(maximizing_actions)
 
 
+class eGreedy(Agent):
+    def select_action(self, transition):
+        # assumes the action value estimator is the 0th element
+        Q_sa = self.estimators[0].evaluate(transition) # dict of action values in state s
+
+        if self.action_selection == 'exploratory':
+            if np.random.random() > 1 - self.epsilon:
+                action = self.actions[np.random.randint(self.n_actions)]
+            else:
+                max_value = max(Q_sa.values())
+                max_actions = [k for k, v in Q_sa.items() if v == max_value]
+                action = np.random.choice(max_actions)
+
+        elif self.action_selection == 'greedy':
+            max_value = max(Q_sa.values())
+            max_actions = [k for k, v in Q_sa.items() if v == max_value]
+            action = np.random.choice(max_actions)
+
+        return action
+
+
 class LambChop(Agent):
-    def combine_state_estimators(self, transition):
+    def select_action(self, transition):
         lam = np.zeros((self.n_actions, len(self.estimators)))
         Q = np.zeros((self.n_actions, len(self.estimators)))
 
@@ -93,7 +108,7 @@ class LambChop(Agent):
 
         # check that lam sums to 1
         # print(np.sum(lam, axis=1))
-        
+
         if self.action_selection == 'greedy':
             a = np.random.choice(np.argwhere(lamQ == np.max(lamQ)).flatten())
             action = self.actions[int(a)]
@@ -108,7 +123,7 @@ class LambChop(Agent):
 
 
 class QGreedyNoveltor(Agent):
-    def combine_state_estimators(self, transition):
+    def select_action(self, transition):
         # Epsilon Greedy Action Selection based on Q values
         if np.random.random() > 1 - self.epsilon:
             action = self.actions[np.random.randint(self.n_actions)]
@@ -121,7 +136,7 @@ class QGreedyNoveltor(Agent):
 
 
 class GlobalNoveltor(Agent):
-    def combine_state_estimators(self, transition):
+    def select_action(self, transition):
         if self.action_selection == "novelty":
             Ns = self.estimators[1]
             if transition.state_ in Ns.approximator.table:

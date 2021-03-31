@@ -107,5 +107,6 @@ class Gridworld(Env, ABC):
                                      reward=self.grid[self.initial_state],
                                      terminal=False, targets=None)
         self.terminal = False
+        self.timeout = False
         self.step_counter = 0
         return copy.deepcopy(self.transition)

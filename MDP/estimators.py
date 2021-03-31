@@ -126,6 +126,18 @@ class bellman_RMax(bellman_Q_table):
             v for v in self.table[t.state_].values()) - self.table[t.state][t.action])
 
 
+class Q_ga_RMax(bellman_RMax):
+    def evaluate(self, c):
+        d = defaultdict(list)
+        for s, actions in self.table.items():
+            for a, value in actions.items():
+                d[a].append(value)
+        global_abstractor = {a: 0 for a in self.actions}
+        for a, v in d.items():
+            global_abstractor[a] = np.mean(v)
+        return global_abstractor
+
+
 class bQt_novel_alpha(table):
     def __init__(self, gamma):
         super().__init__()
@@ -181,6 +193,17 @@ class global_N_abstractor(bellman_N_table):
 
 
 class global_Q_abstractor(bQt_novel_alpha):
+    def evaluate(self, c):
+        d = defaultdict(list)
+        for s, actions in self.table.items():
+            for a, value in actions.items():
+                d[a].append(value)
+        global_abstractor = {a: 0 for a in self.actions}
+        for a, v in d.items():
+            global_abstractor[a] = np.mean(v)
+        return global_abstractor
+
+class Q_ga(bellman_Q_table):
     def evaluate(self, c):
         d = defaultdict(list)
         for s, actions in self.table.items():

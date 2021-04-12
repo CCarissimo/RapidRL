@@ -90,7 +90,7 @@ def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None,
         ax = ax
 
     cax = fig.add_axes([0.27, 0.75, 0.5, 0.05])
-    colormap = plt.get_cmap('RdYlGn')
+    colormap = plt.get_cmap('magma')
     im = ax.imshow(grid, cmap=colormap)
     ax.set_xticks(np.arange(-.5, 8, 1), minor=True)
     ax.set_yticks(np.arange(-.5, 3, 1), minor=True)

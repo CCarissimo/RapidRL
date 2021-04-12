@@ -101,7 +101,7 @@ class LambChop(Agent):
             # since when we calculate bias for an unseen state we initialize the value of the unseen q to 0
             Sigma = n + b ** 2 # this is just the diagonals of the MSE matrix
             Zigma = np.where(Sigma > 0, 1 / Sigma, 0.1)  # Zigma is the Inverse of the Sigma MSE matrix
-            den = np.sum(Zigma)
+            den = np.sum(Zigma) # can not remember why set Zigma to 0.1 when Sigma <= 0
             lam[a] = Zigma / den
 
         lamQ = np.sum(lam * Q, axis=1)
@@ -114,8 +114,12 @@ class LambChop(Agent):
             action = self.actions[int(a)]
 
         elif self.action_selection == 'exploratory':
-            exp_bonus = np.sqrt(np.sum((lam * Q) ** 2, axis=1))
+            t = sum(self.counter.table.values())
+            n_s = np.array(list(self.estimators[0].get_visits(transition).values())) # maybe calculate earlier?
+            exp_bonus = np.where(n_s > 0, np.sqrt(np.log(t)/n_s), 1000)
+            # print(exp_bonus)
             lamQ = lamQ + exp_bonus
+            # print(lamQ)
             a = np.random.choice(np.argwhere(lamQ == np.max(lamQ)).flatten())
             action = self.actions[int(a)]
 

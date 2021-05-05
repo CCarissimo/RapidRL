@@ -166,7 +166,7 @@ The average distance of a behavior to its k-nearest behaviors.
 
 Lehman, Stanley (2011)
 
-Video: [Novelty-Biped](https://www.youtube.com/watch?v=dXQPL9GooyI&t=120s)
+Video: [Novelty-Biped](https://www.youtube.com/watch?v=dXQPL9GooyI&t=1208s)
 
 
 # Approach - Diversity Driven RL

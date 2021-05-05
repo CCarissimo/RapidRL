@@ -11,11 +11,10 @@ class Estimator(ABC):
         self.visits = defaultdict(lambda: np.zeros(len(self.actions)))
         self.table = defaultdict(lambda: np.zeros(len(self.actions)))
 
-    def update(self, buffer_sample):
-        for transition in buffer_sample:
-            context = self.mask.apply(transition.state)
-            action = self.actions[transition.action]
-            self.visits[context][action] += 1
+    def update(self, transition):
+        context = self.mask.apply(transition.state)
+        action = self.actions[transition.action]
+        self.visits[context][action] += 1
 
     def evaluate(self, transition):
         c = self.mask.apply(transition.state)
@@ -32,14 +31,13 @@ class Q_table(Estimator):
         self.alpha = alpha
         self.gamma = gamma
 
-    def update(self, buffer_sample):
-        for t in buffer_sample:
-            c = self.mask.apply(t.state)
-            c_ = self.mask.apply(t.state_)
-            a = self.actions[t.action]
-            self.visits[c][a] += 1
-            self.table[c][a] = self.table[c][a] + self.alpha * \
-                               (t.reward + self.gamma * max(self.table[c_]) - self.table[c][a])
+    def update(self, transition):
+        c = self.mask.apply(t.state)
+        c_ = self.mask.apply(t.state_)
+        a = self.actions[t.action]
+        self.visits[c][a] += 1
+        self.table[c][a] = self.table[c][a] + self.alpha * \
+                           (t.reward + self.gamma * max(self.table[c_]) - self.table[c][a])
 
 
 class RMax_table(Q_table):
@@ -50,19 +48,18 @@ class RMax_table(Q_table):
 
 
 class N_table(Q_table):
-    def update(self, buffer_sample):
-        for t in buffer_sample:
-            c = self.mask.apply(t.state)
-            c_ = self.mask.apply(t.state_)
-            a = self.actions[t.action]
-            if t.terminal or t.state == t.state_:
-                novelty = 0
-            else:
-                novelty = 1 / self.visits[c][a]
+    def update(self, transition):
+        c = self.mask.apply(t.state)
+        c_ = self.mask.apply(t.state_)
+        a = self.actions[t.action]
+        if t.terminal or t.state == t.state_:
+            novelty = 0
+        else:
+            novelty = 1 / self.visits[c][a]
 
-            self.visits[c][a] += 1
-            self.table[c][a] = self.table[c][a] + self.alpha * \
-                               (novelty + self.gamma * max(self.table[c_]) - self.table[c][a])
+        self.visits[c][a] += 1
+        self.table[c][a] = self.table[c][a] + self.alpha * \
+                           (novelty + self.gamma * max(self.table[c_]) - self.table[c][a])
 
 
 # class Estimator:

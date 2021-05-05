@@ -14,7 +14,8 @@ class Estimator(ABC):
     def update(self, buffer_sample):
         for transition in buffer_sample:
             context = self.mask.apply(transition.state)
-            self.visits[context][transition.action] += 1
+            action = self.actions[transition.action]
+            self.visits[context][action] += 1
 
     def evaluate(self, transition):
         c = self.mask.apply(transition.state)

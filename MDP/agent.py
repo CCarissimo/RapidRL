@@ -1,4 +1,27 @@
 import numpy as np
+from .estimators import *
+from .masks import *
+
+
+class MELearner:
+    def __init__(self):
+        self.Qs = Q_table(alpha=0.1, gamma=0.9, mask=identity())
+        self.Qg = Q_table(alpha=0.1, gamma=0.9, mask=global_context())
+        self.Qc = Q_table(alpha=0.1, gamma=0.9, mask=column())
+        self.Qr = Q_table(alpha=0.1, gamma=0.9, mask=row())
+        self.Qe = CombinedActionEstimator([self.Qs, self.Qg, self.Qc, self.Qr])
+
+    def select_action(self, t, greedy=False):
+        if greedy:
+            values = self.Qe.predict(t.state)
+            return np.random.choice(np.flatnonzero(values == values.max()))
+        else:
+            values = self.Qe.predict(t.state) + self.Qe.UCB_bonus(t.state)
+            return np.random.choice(np.flatnonzero(values == values.max()))
+
+    def update(self, transitions):
+        for t in transitions:
+            self.Qe.update(t)
 
 
 class Agent:

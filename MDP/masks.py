@@ -25,3 +25,13 @@ class global_context(Mask):
     def apply(self, state):
         context = 0
         return context
+
+
+class column(Mask):
+    def apply(self, state):
+        return state[1]
+
+
+class row(Mask):
+    def apply(self, state):
+        return state[0]

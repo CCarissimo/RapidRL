@@ -59,18 +59,18 @@ class Gridworld(Env, ABC):
                                      reward=self.grid[self.initial_state],
                                      terminal=False,
                                      targets=None)
-        self.grid_width = len(self.grid[0, :]) - 1
-        self.grid_height = len(self.grid[:, 0]) - 1
+        self.grid_width = len(self.grid[0, :])
+        self.grid_height = len(self.grid[:, 0])
 
     def act_from_state(self, state, action):
-        return tuple(map(lambda x, y: x + y, state, self.actions_dict[action]))
+        return tuple(map(lambda x, y: x + y, state, self.actions_dict[self.actions[action]]))
 
     def step(self, action):
         state_ = self.act_from_state(self.transition.state_, action)
 
-        if state_[0] < 0 or state_[0] > self.grid_height:
+        if state_[0] < 0 or state_[0] > self.grid_height-1:
             state_ = self.transition.state_
-        elif state_[1] < 0 or state_[1] > self.grid_width:
+        elif state_[1] < 0 or state_[1] > self.grid_width-1:
             state_ = self.transition.state_
         else:
             for s in self.blacked_states:

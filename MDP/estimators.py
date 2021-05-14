@@ -10,19 +10,23 @@ class Estimator(ABC):
         self.mask = mask
         self.visits = defaultdict(lambda: np.zeros(len(self.actions)))
         self.table = defaultdict(lambda: np.zeros(len(self.actions)))
+        self.n = 0
 
-    def update(self, transition):
-        context = self.mask.apply(transition.state)
-        action = self.actions[transition.action]
-        self.visits[context][action] += 1
+    def update(self, t):
+        context = self.mask.apply(t.state)
+        self.visits[context][t.action] += 1
+        self.n += 1
 
-    def evaluate(self, transition):
-        c = self.mask.apply(transition.state)
+    def evaluate(self, s):
+        c = self.mask.apply(s)
         return self.table[c]
 
-    def get_visits(self, transition):
-        context = self.mask.apply(transition.state)
+    def get_visits(self, s):
+        context = self.mask.apply(s)
         return self.visits[context]
+
+    def UCB_bonus(self, s):
+        return np.sqrt(np.log(1 + self.n) / (1 + self.visits[s]))  # * UCB Exploration COEFFICIENT
 
 
 class Q_table(Estimator):
@@ -34,17 +38,18 @@ class Q_table(Estimator):
     def update(self, t):
         c = self.mask.apply(t.state)
         c_ = self.mask.apply(t.state_)
-        a = self.actions[t.action]
+        a = t.action
+        nV = 0 if t.terminal else max(self.table[c_])
         self.visits[c][a] += 1
         self.table[c][a] = self.table[c][a] + self.alpha * \
-                           (t.reward + self.gamma * max(self.table[c_]) - self.table[c][a])
+                           (t.reward + self.gamma * nV - self.table[c][a])
 
 
 class RMax_table(Q_table):
     def __init__(self, mask, alpha, gamma, MAX=1, actions=None):
         super().__init__(mask, alpha, gamma, actions)
         self.MAX = MAX
-        self.table = defaultdict(lambda: np.ones(len(self.actions))*MAX)
+        self.table = defaultdict(lambda: np.ones(len(self.actions)) * MAX)
 
 
 class N_table(Q_table):
@@ -66,10 +71,10 @@ class CombinedActionEstimator:
     def __init__(self, estimators):
         self.estimators = estimators
 
-    def weights(self, t):
+    def weights(self, s):
         """ Computes weight matrix of size (n_actions, n_estimators) """
-        N = np.array([e.get_visits(t.state) for e in self.estimators]).T
-        MSE = 0.5 / np.sqrt(N + 1) + np.array([0, 0.2])  # BIAS
+        N = np.array([e.get_visits(s) for e in self.estimators]).T
+        MSE = 0.5 / np.sqrt(N + 1) + np.array([0, 0.2, 0.1, 0.1])  # BIAS
         W = 1 / MSE
         norm = np.abs(W).sum(axis=1)
         for i in range(len(norm)):
@@ -79,18 +84,18 @@ class CombinedActionEstimator:
         Wn = W / norm.reshape(len(norm), 1)
         return Wn
 
-    def predict(self, t):
-        V = np.array([e.evaluate(t.state) for e in self.estimators]).T
-        return np.einsum('ij,ij->i', self.weights(t.state), V)  # row-wise dot product
+    def predict(self, s):
+        V = np.array([e.evaluate(s) for e in self.estimators]).T
+        return np.einsum('ij,ij->i', self.weights(s), V)  # row-wise dot product
 
-    def UCB_bonus(self, t):
-        V = np.array([e.UCB_bonus(t.state) for e in self.estimators]).T
-        return np.einsum('ij,ij->i', self.weights(t.state), V)  # row-wise dot product
+    def UCB_bonus(self, s):
+        V = np.array([e.UCB_bonus(s) for e in self.estimators]).T
+        return np.einsum('ij,ij->i', self.weights(s), V)  # row-wise dot product
 
     def update(self, t):
-        alphas = [e.update(t) for e in self.estimators]
-        return np.mean(alphas)
-
+        for e in self.estimators:
+            e.update(t)
+            # return np.mean(alphas)
 
 # class Estimator:
 #     def __init__(self, mask, actions=None):

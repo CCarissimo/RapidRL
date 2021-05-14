@@ -31,7 +31,7 @@ class Q_table(Estimator):
         self.alpha = alpha
         self.gamma = gamma
 
-    def update(self, transition):
+    def update(self, t):
         c = self.mask.apply(t.state)
         c_ = self.mask.apply(t.state_)
         a = self.actions[t.action]
@@ -44,11 +44,11 @@ class RMax_table(Q_table):
     def __init__(self, mask, alpha, gamma, MAX=1, actions=None):
         super().__init__(mask, alpha, gamma, actions)
         self.MAX = MAX
-        self.table = defaultdict(lambda: {a: MAX for a in self.actions})
+        self.table = defaultdict(lambda: np.ones(len(self.actions))*MAX)
 
 
 class N_table(Q_table):
-    def update(self, transition):
+    def update(self, t):
         c = self.mask.apply(t.state)
         c_ = self.mask.apply(t.state_)
         a = self.actions[t.action]
@@ -60,6 +60,36 @@ class N_table(Q_table):
         self.visits[c][a] += 1
         self.table[c][a] = self.table[c][a] + self.alpha * \
                            (novelty + self.gamma * max(self.table[c_]) - self.table[c][a])
+
+
+class CombinedActionEstimator:
+    def __init__(self, estimators):
+        self.estimators = estimators
+
+    def weights(self, t):
+        """ Computes weight matrix of size (n_actions, n_estimators) """
+        N = np.array([e.get_visits(t.state) for e in self.estimators]).T
+        MSE = 0.5 / np.sqrt(N + 1) + np.array([0, 0.2])  # BIAS
+        W = 1 / MSE
+        norm = np.abs(W).sum(axis=1)
+        for i in range(len(norm)):
+            if norm[i] == 0:
+                W[i, :] = 1 / len(self.estimators)
+        norm[norm == 0] = 1
+        Wn = W / norm.reshape(len(norm), 1)
+        return Wn
+
+    def predict(self, t):
+        V = np.array([e.evaluate(t.state) for e in self.estimators]).T
+        return np.einsum('ij,ij->i', self.weights(t.state), V)  # row-wise dot product
+
+    def UCB_bonus(self, t):
+        V = np.array([e.UCB_bonus(t.state) for e in self.estimators]).T
+        return np.einsum('ij,ij->i', self.weights(t.state), V)  # row-wise dot product
+
+    def update(self, t):
+        alphas = [e.update(t) for e in self.estimators]
+        return np.mean(alphas)
 
 
 # class Estimator:

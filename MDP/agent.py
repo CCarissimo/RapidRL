@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Agent:
-    def __init__(self, estimators, buffer, targets, counter, batch_size=1):
+    def __init__(self, estimators, buffer, targets, batch_size=1):
         self.actions = ['up', 'down', 'left', 'right']
         self.n_actions = len(self.actions)
         self.actions_map = {action: i for i, action in enumerate(self.actions)}
@@ -11,7 +11,6 @@ class Agent:
         self.estimators = estimators
         self.buffer = buffer
         self.targets = targets
-        self.counter = counter
         self.action_selection = None
 
     def select_action(self, transition):
@@ -20,11 +19,7 @@ class Agent:
 
     def observe(self, transition):
         self.trajectory.append(transition)
-        self.update_counter(transition)
         self.buffer.append(transition)
-        # if transition.terminal:
-        #     T = self.compute_trajectory_targets(self.trajectory)
-        #     self.store_trajectory(self.trajectory, T)
 
     def train(self):
         if self.buffer.size >= self.batch_size:
@@ -32,10 +27,6 @@ class Agent:
             for transition in S:
                 for E in self.estimators:
                     E.update(transition)
-
-    def update_counter(self, transition):
-        self.counter.update_table(transition)
-        self.counter.update_value(transition)
 
     def compute_trajectory_targets(self, trajectory):
         for target in self.targets:
@@ -64,8 +55,8 @@ class Greedy(Agent):
 
 
 class eGreedy(Agent):
-    def __init__(self, estimators, buffer, targets, counter, epsilon, batch_size=1):
-        super().__init__(estimators, buffer, targets, counter, batch_size=1)
+    def __init__(self, estimators, buffer, targets, epsilon, batch_size=1):
+        super().__init__(estimators, buffer, targets, batch_size=1)
         self.epsilon = epsilon
 
     def select_action(self, transition):
@@ -83,6 +74,7 @@ class eGreedy(Agent):
         elif self.action_selection == 'greedy':
             max_value = np.max(Q_s)
             max_actions = np.argwhere(Q_s == max_value)
+            print(max_actions)
             action = self.actions[np.random.choice(max_actions)]
 
         return action

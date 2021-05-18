@@ -28,6 +28,9 @@ class Estimator(ABC):
     def UCB_bonus(self, s):
         return np.sqrt(np.log(1 + self.n) / (1 + self.visits[s]))  # * UCB Exploration COEFFICIENT
 
+    def count_parameters(self):
+        return len(self.table) * len(self.actions)
+
 
 class Q_table(Estimator):
     def __init__(self, mask, alpha, gamma, actions=None):
@@ -43,6 +46,7 @@ class Q_table(Estimator):
         self.visits[c][a] += 1
         self.table[c][a] = self.table[c][a] + self.alpha * \
                            (t.reward + self.gamma * nV - self.table[c][a])
+        self.n += 1
 
 
 class RMax_table(Q_table):
@@ -65,6 +69,7 @@ class N_table(Q_table):
         self.visits[c][a] += 1
         self.table[c][a] = self.table[c][a] + self.alpha * \
                            (novelty + self.gamma * max(self.table[c_]) - self.table[c][a])
+        self.n += 1
 
 
 class CombinedActionEstimator:
@@ -96,6 +101,45 @@ class CombinedActionEstimator:
         for e in self.estimators:
             e.update(t)
             # return np.mean(alphas)
+
+
+class CombinedAIC:
+    def __init__(self, estimators, RSS_alpha):
+        self.estimators = estimators
+        self.prev_V = np.zeros(len(self.estimators))
+        self.RSS = np.ones(len(self.estimators)) * 0.01
+        self.alpha = RSS_alpha
+        self.W = np.ones(len(self.estimators))/len(self.estimators)
+
+    def weights(self, s):
+        """Computes the weights for the estimators based on the Akaike Information Criterion"""
+        K = np.array([e.count_parameters() for e in self.estimators]).T
+        N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+        complexity = np.multiply(2, K)
+        accuracy = np.multiply(N, np.log(self.RSS))
+        AIC = np.subtract(complexity, accuracy)
+        w = 1/AIC
+        self.W = w/np.sum(w)
+        # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, W)
+        return self.W
+
+    def predict(self, s):
+        V = np.array([e.evaluate(s) for e in self.estimators]).T
+        self.prev_V = V
+        # print('predict', V)
+        return np.einsum('i,ij->i', self.weights(s), V)  # row-wise dot product
+
+    def update_RSS(self, r, a): # un-discounted reward
+        e = np.subtract(np.multiply(r, np.ones(len(self.estimators))), self.prev_V[a])
+        e2 = np.power(e, 2)
+        # print('RSS', self.RSS, e, e2)
+        self.RSS = np.multiply(self.alpha, self.RSS) + np.multiply((1-self.alpha), e2)
+        # print('RSS2', self.RSS)
+        return self.RSS
+
+    def update(self, t):
+        for e in self.estimators:
+            e.update(t)
 
 # class Estimator:
 #     def __init__(self, mask, actions=None):

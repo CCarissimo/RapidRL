@@ -4,7 +4,7 @@ from warnings import filterwarnings
 import matplotlib.pyplot as plt
 
 GRIDWORLD = "WILLEMSEN"
-ANIMATE = True
+ANIMATE = False
 max_steps = 10000
 episode_timeout = 34
 gamma = 0.8
@@ -45,7 +45,32 @@ print(states)
 
 filterwarnings('ignore')
 
-agent = MDP.MELearner()
+
+class ME_AIC_Learner:
+    def __init__(self):
+        self.Qs = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.identity())
+        self.Qg = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.global_context())
+        self.Qc = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.column())
+        self.Qr = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.row())
+        self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
+
+    def select_action(self, t, greedy=False):
+        if t.action != 'initialize':
+            self.Qe.update_RSS(t.reward, t.action)
+
+        if greedy: # use estimator with minimum RSS
+            values = self.Qe.predict(t.state)
+            return np.random.choice(np.flatnonzero(values == values.max()))
+        else: # use the AIC combined estimators
+            values = self.Qe.predict(t.state)
+            return np.random.choice(np.flatnonzero(values == values.max()))
+
+    def update(self, transitions):
+        for t in transitions:
+            self.Qe.update(t)
+
+
+agent = ME_AIC_Learner()
 rb = MDP.ReplayMemory(max_size=10000)
 
 trajectory = []
@@ -65,7 +90,7 @@ for i in range(max_steps):
     S = rb.sample(1)
     agent.update(S)
     trajectory.append(transition)
-
+    # print(transition)
     # EXPLOIT: by setting action selection to be exploitative: "greedy"
     Gg = []
     # RUN entire trajectory, and set greedy env to the initial state
@@ -85,6 +110,9 @@ for i in range(max_steps):
     A_vector = [np.argmax(q) for q in Q_matrix]
     imA = np.reshape(A_vector, (env.grid_height, env.grid_width)).T
 
+    K = [e.count_parameters() for e in agent.Qe.estimators]
+    RSS = agent.Qe.RSS
+
     metrics.append({
         't': i,
         'V': imV,
@@ -92,6 +120,9 @@ for i in range(max_steps):
         'S': transition.state_,
         'Gn': Gn,
         'Gg': Gg,
+        'W': agent.Qe.W,
+        'K': K,
+        'RSS': RSS,
         'steps': step
     })
 
@@ -136,6 +167,26 @@ ax2.scatter(cumEpiG, [ele[1] for ele in epilen], s=5)
 MDP.plt.tight_layout()
 plt.show()
 
+for i in range(len(agent.Qe.estimators)):
+    estimator_weights = [ele['W'][i] for ele in metrics]
+    plt.plot(estimator_weights, label=i)
+plt.title('weights over time')
+plt.legend()
+plt.show()
+
+for i in range(len(agent.Qe.estimators)):
+    estimator_weights = [ele['K'][i] for ele in metrics]
+    plt.plot(estimator_weights, label=i)
+plt.title('K over time')
+plt.legend()
+plt.show()
+
+for i in range(len(agent.Qe.estimators)):
+    estimator_weights = [ele['RSS'][i] for ele in metrics]
+    plt.plot(estimator_weights, label=i)
+plt.title('RSS over time')
+plt.legend()
+plt.show()
 
 def overlay_actions(A):
     global ann_list

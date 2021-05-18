@@ -78,7 +78,7 @@ class Gridworld(Env, ABC):
                     state_ = self.transition.state_
                     continue
 
-        reward = self.grid[state_]
+        reward = self.grid[state_] if state_ != self.transition.state_ else 0  # reward 0 if action leads to same state
 
         for s in self.terminal_states:
             if (state_ == s).all():

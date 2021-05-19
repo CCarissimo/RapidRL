@@ -3,13 +3,16 @@ import MDP
 from warnings import filterwarnings
 import matplotlib.pyplot as plt
 
-GRIDWORLD = "WILLEMSEN"
-ANIMATE = False
-max_steps = 10000
-episode_timeout = 34
-gamma = 0.8
-alpha = 0.1
-batch_size = 10
+GRIDWORLD = "POOL"
+AGENT_TYPE = "NOVELTOR"
+ANIMATE = True
+MAX_STEPS = 10000
+EPISODE_TIMEOUT = 100
+GAMMA = 0.8
+ALPHA = 0.1
+BATCH_SIZE = 10
+
+FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]"
 
 if GRIDWORLD == "WILLEMSEN":
     grid = np.ones((3, 9)) * -1
@@ -35,39 +38,61 @@ elif GRIDWORLD == "POOL":
 
 # _, _, _, _ = MDP.plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
-
-
-env = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, episode_timeout)
-env_greedy = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, episode_timeout)
+env = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
+env_greedy = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 
 states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
-print(states)
 
 filterwarnings('ignore')
 
+if AGENT_TYPE == 'NOVELTOR':
+    class ME_AIC_Learner:
+        def __init__(self):
+            self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+            self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+            self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
+            self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
+            self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
 
-class ME_AIC_Learner:
-    def __init__(self):
-        self.Qs = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.identity())
-        self.Qg = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.global_context())
-        self.Qc = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.column())
-        self.Qr = MDP.RMax_table(alpha=0.1, gamma=0.9, mask=MDP.row())
-        self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
+        def select_action(self, t, greedy=False):
+            if t.action != 'initialize':
+                self.Qe.update_RSS(t.reward, t.action)
 
-    def select_action(self, t, greedy=False):
-        if t.action != 'initialize':
-            self.Qe.update_RSS(t.reward, t.action)
+            if greedy: # use estimator with minimum RSS
+                values = self.Qe.predict(t.state)
+                # print(t, values)
+                return np.random.choice(np.flatnonzero(values == values.max()))
+            else: # use the AIC combined estimators
+                values = self.Qe.predict(t.state)
+                return np.random.choice(np.flatnonzero(values == values.max()))
 
-        if greedy: # use estimator with minimum RSS
-            values = self.Qe.predict(t.state)
-            return np.random.choice(np.flatnonzero(values == values.max()))
-        else: # use the AIC combined estimators
-            values = self.Qe.predict(t.state)
-            return np.random.choice(np.flatnonzero(values == values.max()))
+        def update(self, transitions):
+            for t in transitions:
+                self.Qe.update(t)
 
-    def update(self, transitions):
-        for t in transitions:
-            self.Qe.update(t)
+else:
+    class ME_AIC_Learner:
+        def __init__(self):
+            self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+            self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+            self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
+            self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
+            self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
+
+        def select_action(self, t, greedy=False):
+            if t.action != 'initialize':
+                self.Qe.update_RSS(t.reward, t.action)
+
+            if greedy: # use estimator with minimum RSS
+                values = self.Qe.predict(t.state)
+                return np.random.choice(np.flatnonzero(values == values.max()))
+            else: # use the AIC combined estimators
+                values = self.Qe.predict(t.state)
+                return np.random.choice(np.flatnonzero(values == values.max()))
+
+        def update(self, transitions):
+            for t in transitions:
+                self.Qe.update(t)
 
 
 agent = ME_AIC_Learner()
@@ -81,7 +106,7 @@ Gn = []
 step = 0
 
 # MAIN TRAINING and EVALUATION LOOP
-for i in range(max_steps):
+for i in range(MAX_STEPS):
     # EXPLORE
     action = agent.select_action(env.transition)
     transition = env.step(action)
@@ -134,24 +159,26 @@ for i in range(max_steps):
         trajectory = []
         Gn = []
 
-x = MDP.np.arange(0, metrics[-1]['steps'])
+# PLOT Cumulative Returns over time #
+
+x = np.arange(0, metrics[-1]['steps'])
 yn = []
 yg = []
 for i, metric in enumerate(metrics):
     Yn = 0
     Yg = 0
     for j, g in enumerate(metric['Gn']):
-        Yn += gamma ** j * g
+        Yn += GAMMA ** j * g
     for j, g in enumerate(metric['Gg']):
-        Yg += gamma ** j * g
+        Yg += GAMMA ** j * g
 
     yn.append(Yn)
     yg.append(Yg)
 
-cumEpilen = MDP.np.cumsum([ele[0] for ele in epilen])
-cumEpiG = MDP.np.cumsum([ele[1] for ele in epilen])
+cumEpilen = np.cumsum([ele[0] for ele in epilen])
+cumEpiG = np.cumsum([ele[1] for ele in epilen])
 
-fig, (ax1, ax2) = MDP.plt.subplots(nrows=2, figsize=(10, 5))
+fig, (ax1, ax2) = plt.subplots(nrows=2, figsize=(10, 5))
 ax1.plot(x, yn, label='exploring')
 
 ax1.plot(x, yg, label='exploiting')
@@ -167,26 +194,33 @@ ax2.scatter(cumEpiG, [ele[1] for ele in epilen], s=5)
 MDP.plt.tight_layout()
 plt.show()
 
+# PLOT Estimator Evolution over time #
+
+labels = [type(e.mask).__name__ for e in agent.Qe.estimators]
+
 for i in range(len(agent.Qe.estimators)):
     estimator_weights = [ele['W'][i] for ele in metrics]
-    plt.plot(estimator_weights, label=i)
-plt.title('weights over time')
+    plt.plot(estimator_weights, label=labels[i])
+plt.title('W over time')
 plt.legend()
 plt.show()
 
+
 for i in range(len(agent.Qe.estimators)):
     estimator_weights = [ele['K'][i] for ele in metrics]
-    plt.plot(estimator_weights, label=i)
+    plt.plot(estimator_weights, label=labels[i])
 plt.title('K over time')
 plt.legend()
 plt.show()
 
+
 for i in range(len(agent.Qe.estimators)):
     estimator_weights = [ele['RSS'][i] for ele in metrics]
-    plt.plot(estimator_weights, label=i)
+    plt.plot(estimator_weights, label=labels[i])
 plt.title('RSS over time')
 plt.legend()
 plt.show()
+
 
 def overlay_actions(A):
     global ann_list
@@ -222,7 +256,7 @@ def evaluate(ag, Env, n_episodes, greedy=True):
         s = Env.reset()
         tau = [] # trajectory
         terminal, g, t = False, 0, 0
-        while not terminal and t < episode_timeout:
+        while not terminal and t < EPISODE_TIMEOUT:
             a = ag.select_action(s, greedy=greedy)
             ns, r, terminal = Env.transition(s, a)
             tau.append((s, a, r, ns, terminal))
@@ -277,7 +311,7 @@ if ANIMATE:
             overlay_actions(metrics[i]['A'])
         cax.cla()
         cb = fig.colorbar(im, cax=cax)
-        tx.set_text(f'{VISUALISE_METRIC} at {metrics[i]["steps"] / max_steps * 100:2.0f}% training')
+        tx.set_text(f'{VISUALISE_METRIC} at {metrics[i]["steps"] / MAX_STEPS * 100:2.0f}% training')
 
 
     ani = animation.FuncAnimation(fig, animate, frames=len(metrics))
@@ -286,5 +320,5 @@ if ANIMATE:
 
     # HTML(ani.to_jshtml())
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, metadata=dict(artist='Michael Kaisers'), bitrate=1800)
-    ani.save(f"test-QL-{VISUALISE_METRIC}.mp4", writer=writer)
+    writer = Writer(fps=15, metadata=dict(artist='Michael Kaisers'), bitrate=-1)
+    ani.save(f"V_animation_{FILE_SIG}_-{VISUALISE_METRIC}.mp4", writer=writer)

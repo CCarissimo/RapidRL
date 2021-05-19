@@ -60,11 +60,11 @@ class N_table(Q_table):
     def update(self, t):
         c = self.mask.apply(t.state)
         c_ = self.mask.apply(t.state_)
-        a = self.actions[t.action]
+        a = t.action
         if t.terminal or t.state == t.state_:
             novelty = 0
         else:
-            novelty = 1 / self.visits[c][a]
+            novelty = 1 / (self.visits[c][a]+1)
 
         self.visits[c][a] += 1
         self.table[c][a] = self.table[c][a] + self.alpha * \

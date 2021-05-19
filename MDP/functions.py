@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import matplotlib.patches as patches
 from collections import defaultdict
+import math
 
 
 # For (s,a), find the cumulative discounted sum of rewards over a set of trajectories
@@ -89,7 +90,7 @@ def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None,
         ax = ax
 
     cax = fig.add_axes([0.27, 0.75, 0.5, 0.05])
-    colormap = plt.get_cmap('RdYlGn')
+    colormap = plt.get_cmap('magma')
     im = ax.imshow(grid, cmap=colormap)
     ax.set_xticks(np.arange(-.5, 8, 1), minor=True)
     ax.set_yticks(np.arange(-.5, 3, 1), minor=True)
@@ -119,20 +120,24 @@ def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None,
     return fig, ax, im, cb
 
 
-def run_trajectory(env, agent, epsilon, abstract=False):
+def run_trajectory(env, agent, epsilon):
     env.reset()
     agent.reset_trajectory()
     agent.epsilon = epsilon
-    agent.abstract = abstract
 
+    G = []
+    steps = 0
     while not env.terminal:
         action = agent.select_action(env.transition)
-
+        # print(agent.estimators[1].approximator.table)
         transition = env.step(action)
 
         agent.observe(transition)
 
-    return agent.trajectory
+        G.append(transition.reward)
+        steps += 1
+
+    return agent.trajectory, G, steps
 
 
 def generate_codes(verts):
@@ -169,7 +174,7 @@ def action_abstraction(sa_values_table, state_dist_table):
     states = list(sa_values_table.keys())
     arbitrary_state = states[0]
     action_keys = sa_values_table[arbitrary_state].keys()
-    abstraction = {}
+    abstraction = defaultdict(lambda: 0)
     for action in action_keys:
         if action in abstraction.keys():
             pass
@@ -194,14 +199,14 @@ def action_abstraction_bias(sa_values_table, a_abstraction_table):
 
 def generate_heatmap(grid, table, aggf=None, actions=False):
     if actions:
-        hm = np.zeros((3,3))
+        hm = np.ones((3,3)) * math.ceil(min(v for v in table[0].values()))
         if aggf is None:
             aggf = lambda x: x
 
-        hm[0,1] = table['up']
-        hm[1,2] = table['right']
-        hm[1,0] = table['left']
-        hm[2,1] = table['down']
+        hm[0,1] = table[0]['up']
+        hm[1,2] = table[0]['right']
+        hm[1,0] = table[0]['left']
+        hm[2,1] = table[0]['down']
 
     else:
         hm = np.copy(grid) * 0

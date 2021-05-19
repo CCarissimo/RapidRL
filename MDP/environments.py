@@ -52,24 +52,25 @@ class Gridworld(Env, ABC):
         self.step_counter = 0
         self.max_steps = max_steps
         self.terminal = False
+        self.timeout = False
         self.transition = Transition(state=self.initial_state,
                                      action='initialize',
                                      state_=self.initial_state,
                                      reward=self.grid[self.initial_state],
                                      terminal=False,
                                      targets=None)
-        self.grid_width = len(self.grid[0, :]) - 1
-        self.grid_height = len(self.grid[:, 0]) - 1
+        self.grid_width = len(self.grid[0, :])
+        self.grid_height = len(self.grid[:, 0])
 
     def act_from_state(self, state, action):
-        return tuple(map(lambda x, y: x + y, state, self.actions_dict[action]))
+        return tuple(map(lambda x, y: x + y, state, self.actions_dict[self.actions[action]]))
 
     def step(self, action):
         state_ = self.act_from_state(self.transition.state_, action)
 
-        if state_[0] < 0 or state_[0] > self.grid_height:
+        if state_[0] < 0 or state_[0] > self.grid_height-1:
             state_ = self.transition.state_
-        elif state_[1] < 0 or state_[1] > self.grid_width:
+        elif state_[1] < 0 or state_[1] > self.grid_width-1:
             state_ = self.transition.state_
         else:
             for s in self.blacked_states:
@@ -77,14 +78,14 @@ class Gridworld(Env, ABC):
                     state_ = self.transition.state_
                     continue
 
-        reward = self.grid[state_]
+        reward = self.grid[state_] if state_ != self.transition.state_ else 0  # reward 0 if action leads to same state
 
         for s in self.terminal_states:
             if (state_ == s).all():
                 self.terminal = True
 
         if self.step_counter == self.max_steps:
-            self.terminal = True
+            self.timeout = True
 
         self.transition = Transition(state=self.transition.state_, action=action, state_=state_, reward=reward,
                                      terminal=self.terminal, targets=None)
@@ -93,10 +94,20 @@ class Gridworld(Env, ABC):
 
         return copy.deepcopy(self.transition)
 
-    def reset(self):
-        self.transition = Transition(state=self.initial_state, action='initialize', state_=tuple(self.initial_state),
-                                     reward=self.grid[tuple(self.initial_state)],
+    def set(self, state: tuple):
+        self.transition = Transition(state=state, action='initialize', state_=state,
+                                     reward=self.grid[state],
                                      terminal=False, targets=None)
         self.terminal = False
         self.step_counter = 0
         return copy.deepcopy(self.transition)
+
+    def reset(self):
+        self.transition = Transition(state=self.initial_state, action='initialize', state_=self.initial_state,
+                                     reward=self.grid[self.initial_state],
+                                     terminal=False, targets=None)
+        self.terminal = False
+        self.timeout = False
+        self.step_counter = 0
+        return copy.deepcopy(self.transition)
+

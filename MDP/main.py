@@ -3,14 +3,14 @@ import MDP
 from warnings import filterwarnings
 import matplotlib.pyplot as plt
 
-GRIDWORLD = "POOL"
+GRIDWORLD = "WILLEMSEN"
 AGENT_TYPE = "NOVELTOR"
 ANIMATE = True
-MAX_STEPS = 10000
-EPISODE_TIMEOUT = 100
+MAX_STEPS = 100
+EPISODE_TIMEOUT = 34
 GAMMA = 0.8
 ALPHA = 0.1
-BATCH_SIZE = 10
+BATCH_SIZE = 1
 
 FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]"
 
@@ -28,13 +28,13 @@ if GRIDWORLD == "WILLEMSEN":
     initial_state = np.array([1, 0])
     blacked_state = np.array([[0, 8], [2, 8]])
 elif GRIDWORLD == "POOL":
-    grid = np.ones((10, 10)) * 0
-    grid[3:7, 3:7] = -1
-    grid[9, 9] = 1
-    terminal_state = np.array([9, 9])
+    grid = np.ones((8, 8)) * 0
+    grid[3:6, 3:6] = -1
+    grid[7, 7] = 1
+    terminal_state = np.array([7, 7])
     initial_state = np.array([1, 0])
     # blacked_state = np.array([[5, 5], [4, 5], [5, 4], [4, 4]])
-    blacked_state = []
+    blacked_state = np.array([[np.nan, np.nan], [np.nan, np.nan]])
 
 # _, _, _, _ = MDP.plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
@@ -56,7 +56,8 @@ if AGENT_TYPE == 'NOVELTOR':
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
-                self.Qe.update_RSS(t.reward, t.action)
+                reward = 1/(self.Qs.visits[t.state][t.action] + 1) if t.state_ != t.state else 0
+                self.Qe.update_RSS(reward, t.action)
 
             if greedy: # use estimator with minimum RSS
                 values = self.Qe.predict(t.state)
@@ -112,7 +113,7 @@ for i in range(MAX_STEPS):
     transition = env.step(action)
     rb.append(transition)
     Gn.append(transition.reward)
-    S = rb.sample(1)
+    S = rb.sample(batch_size=BATCH_SIZE)
     agent.update(S)
     trajectory.append(transition)
     # print(transition)

@@ -72,6 +72,31 @@ class N_table(Q_table):
         self.n += 1
 
 
+class LinearEstimator:
+    def __init__(self, actions=None):
+        if actions is None:
+            self.actions = {'up': 0, 'down': 1, 'left': 2, 'right': 3}
+        self.n = 0
+        self.P = np.zeros((len(self.actions), 2))
+
+    def update(self, t):
+        # update rule
+        self.n += 1
+
+    def evaluate(self, s):
+        c = self.mask.apply(s)
+        return self.table[c]
+
+    def get_visits(self, s):
+        return self.n
+
+    def UCB_bonus(self, s):
+        return np.sqrt(np.log(1 + self.n) / (1 + self.visits[s]))  # * UCB Exploration COEFFICIENT
+
+    def count_parameters(self):
+        return len(self.table) * len(self.actions) + 1  # 1 residual for the estimator, more if local RSS
+
+
 class CombinedActionEstimator:
     def __init__(self, estimators):
         self.estimators = estimators

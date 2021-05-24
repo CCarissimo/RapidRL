@@ -143,7 +143,7 @@ class CombinedAIC:
             AIC = np.subtract(complexity, accuracy)
             w = 1/AIC
         self.W = w/np.sum(w)
-        # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, W)
+        # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, self.W)
         return self.W
 
     def predict(self, s):
@@ -156,14 +156,12 @@ class CombinedAIC:
     def update_RSS(self, a, r, s_): # un-discounted reward
         V = np.array([e.evaluate(s_) for e in self.estimators]).T
         gamma = self.estimators[0].gamma
-        Qsa = np.dot(self.prev_V, self.prev_W)[a]
+        Qsa = self.prev_V[a]
         maxQs_a_ = np.max(np.dot(V, self.prev_W))
-        target = r + gamma * maxQs_a_ - Qsa
-        e = np.subtract(np.multiply(r, target), self.prev_V[a])
+        e = r + gamma * maxQs_a_ - Qsa
         e2 = np.power(e, 2)
-        # print('RSS', self.RSS, e, e2)
         self.RSS = np.multiply(self.alpha, self.RSS) + np.multiply((1-self.alpha), e2)
-        # print('RSS2', self.RSS)
+        # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
         return self.RSS
 
     def update(self, t):

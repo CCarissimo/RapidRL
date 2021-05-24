@@ -29,7 +29,7 @@ class Estimator(ABC):
         return np.sqrt(np.log(1 + self.n) / (1 + self.visits[s]))  # * UCB Exploration COEFFICIENT
 
     def count_parameters(self):
-        return len(self.table) * len(self.actions)
+        return len(self.table) * len(self.actions) + 1  # 1 residual for the estimator, more if local RSS
 
 
 class Q_table(Estimator):

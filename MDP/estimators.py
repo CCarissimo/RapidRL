@@ -107,6 +107,7 @@ class CombinedAIC:
     def __init__(self, estimators, RSS_alpha, weights_method='exponential'):
         self.estimators = estimators
         self.prev_V = np.zeros(len(self.estimators))
+        self.prev_W = np.zeros(len(self.estimators))
         self.RSS = np.ones(len(self.estimators)) * 0.01
         self.alpha = RSS_alpha
         self.W = np.ones(len(self.estimators))/len(self.estimators)
@@ -148,11 +149,17 @@ class CombinedAIC:
     def predict(self, s):
         V = np.array([e.evaluate(s) for e in self.estimators]).T
         self.prev_V = V
+        self.prev_W = self.weights(s)
         # print('predict', V, self.weights(s))
-        return np.dot(V, self.weights(s))  # Matrix @ Vector dot product
+        return np.dot(V, self.prev_W)  # Matrix @ Vector dot product
 
-    def update_RSS(self, r, a): # un-discounted reward
-        e = np.subtract(np.multiply(r, np.ones(len(self.estimators))), self.prev_V[a])
+    def update_RSS(self, a, r, s_): # un-discounted reward
+        V = np.array([e.evaluate(s_) for e in self.estimators]).T
+        gamma = self.estimators[0].gamma
+        Qsa = np.dot(self.prev_V, self.prev_W)[a]
+        maxQs_a_ = np.max(np.dot(V, self.prev_W))
+        target = r + gamma * maxQs_a_ - Qsa
+        e = np.subtract(np.multiply(r, target), self.prev_V[a])
         e2 = np.power(e, 2)
         # print('RSS', self.RSS, e, e2)
         self.RSS = np.multiply(self.alpha, self.RSS) + np.multiply((1-self.alpha), e2)

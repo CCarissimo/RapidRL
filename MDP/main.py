@@ -63,8 +63,7 @@ if AGENT_TYPE == 'NOVELTOR':
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
                 reward = 1/(self.Qs.visits[t.state][t.action] + 1) if t.state_ != t.state else 0
-                self.Qe.update_RSS(reward, t.action)
-
+                self.Qe.update_RSS(t.action, reward, t.state_)
             if greedy: # use estimator with minimum RSS
                 values = self.Qe.predict(t.state)
                 # print(t, values)
@@ -93,7 +92,7 @@ else:
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
-                self.Qe.update_RSS(t.reward, t.action)
+                self.Qe.update_RSS(t.action, t.reward, t.state_)
 
             if greedy: # use estimator with minimum RSS
                 values = self.Qe.predict(t.state)

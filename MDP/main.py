@@ -209,28 +209,39 @@ plt.show()
 # PLOT Estimator Evolution over time #
 
 labels = [type(e.mask).__name__ for e in agent.Qe.estimators]
-
+W = []
 for i in range(len(agent.Qe.estimators)):
-    estimator_weights = [ele['W'][i] for ele in metrics]
-    plt.plot(estimator_weights, label=labels[i])
+    w = [ele['W'][i] for ele in metrics]
+    W.append(w)
+    plt.plot(w, label=labels[i])
 plt.title('W over time')
 plt.legend()
 plt.show()
 
-
+K = []
 for i in range(len(agent.Qe.estimators)):
-    estimator_weights = [ele['K'][i] for ele in metrics]
-    plt.plot(estimator_weights, label=labels[i])
+    k = [ele['K'][i] for ele in metrics]
+    K.append(k)
+    plt.plot(k, label=labels[i])
 plt.title('K over time')
 plt.legend()
 plt.show()
 
 
 for i in range(len(agent.Qe.estimators)):
-    estimator_weights = [ele['RSS'][i] for ele in metrics]
-    plt.plot(estimator_weights, label=labels[i])
+    RSS = [ele['RSS'][i] for ele in metrics]
+    plt.plot(RSS, label=labels[i])
 plt.title('RSS over time')
 plt.legend()
+plt.show()
+
+
+# Complexity PLOT
+W = np.array(W)
+K = np.array(K)
+C = (W * K).sum(axis=0)  # matrix product
+plt.title('Complexity over time')
+plt.plot(C)
 plt.show()
 
 

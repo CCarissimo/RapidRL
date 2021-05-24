@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 GRIDWORLD = "WILLEMSEN"
 AGENT_TYPE = "NOVELTOR"
-ANIMATE = True
+ANIMATE = False
 MAX_STEPS = 100
 EPISODE_TIMEOUT = 34
 GAMMA = 0.8

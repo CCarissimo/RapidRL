@@ -48,11 +48,16 @@ filterwarnings('ignore')
 if AGENT_TYPE == 'NOVELTOR':
     class ME_AIC_Learner:
         def __init__(self):
-            self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-            self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-            self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-            self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-            self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
+            if GRIDWORLD == 'WILLEMSEN':
+                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9)
+            elif GRIDWORLD == 'POOL':
+                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
+                self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
@@ -74,11 +79,16 @@ if AGENT_TYPE == 'NOVELTOR':
 else:
     class ME_AIC_Learner:
         def __init__(self):
-            self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-            self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-            self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-            self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-            self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
+            if GRIDWORLD == 'WILLEMSEN':
+                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9)
+            elif GRIDWORLD == 'POOL':
+                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
+                self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':

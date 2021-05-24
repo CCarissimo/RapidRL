@@ -126,8 +126,8 @@ class CombinedAIC:
     def predict(self, s):
         V = np.array([e.evaluate(s) for e in self.estimators]).T
         self.prev_V = V
-        # print('predict', V)
-        return np.einsum('i,ij->i', self.weights(s), V)  # row-wise dot product
+        # print('predict', V, self.weights(s))
+        return np.dot(V, self.weights(s))  # Matrix @ Vector dot product
 
     def update_RSS(self, r, a): # un-discounted reward
         e = np.subtract(np.multiply(r, np.ones(len(self.estimators))), self.prev_V[a])

@@ -11,6 +11,7 @@ EPISODE_TIMEOUT = 34
 GAMMA = 0.8
 ALPHA = 0.1
 BATCH_SIZE = 1
+WEIGHTS_METHOD = "exponential"
 
 FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]"
 
@@ -41,7 +42,7 @@ elif GRIDWORLD == "POOL":
 env = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 env_greedy = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 
-states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
+states = [(1, j) for j in range(env.grid_width)]
 
 filterwarnings('ignore')
 
@@ -51,13 +52,13 @@ if AGENT_TYPE == 'NOVELTOR':
             if GRIDWORLD == 'WILLEMSEN':
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL':
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
                 self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
@@ -82,13 +83,13 @@ else:
             if GRIDWORLD == 'WILLEMSEN':
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL':
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
                 self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
@@ -138,13 +139,14 @@ for i in range(MAX_STEPS):
 
     step += 1
 
+    # Q_matrix = np.zeros((env.grid_height, env.grid_width, 4))
     Q_matrix = [agent.Qe.predict(s) for s in states]
-    # print(Q_matrix)
+
     V_vector = [max(q) for q in Q_matrix]
     # print(V_vector)
-    imV = np.reshape(V_vector, (env.grid_height, env.grid_width)).T
+    imV = np.reshape(V_vector, (1, env.grid_width)).T
     A_vector = [np.argmax(q) for q in Q_matrix]
-    imA = np.reshape(A_vector, (env.grid_height, env.grid_width)).T
+    imA = np.reshape(A_vector, (1, env.grid_width)).T
 
     K = [e.count_parameters() for e in agent.Qe.estimators]
     RSS = agent.Qe.RSS

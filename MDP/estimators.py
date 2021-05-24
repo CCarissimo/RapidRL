@@ -104,21 +104,43 @@ class CombinedActionEstimator:
 
 
 class CombinedAIC:
-    def __init__(self, estimators, RSS_alpha):
+    def __init__(self, estimators, RSS_alpha, weights_method='exponential'):
         self.estimators = estimators
         self.prev_V = np.zeros(len(self.estimators))
         self.RSS = np.ones(len(self.estimators)) * 0.01
         self.alpha = RSS_alpha
         self.W = np.ones(len(self.estimators))/len(self.estimators)
+        self.weights_method = weights_method
+
+    # def weights(self, s):
+    #     """Computes the weights for the estimators based on the Akaike Information Criterion"""
+    #     K = np.array([e.count_parameters() for e in self.estimators]).T
+    #     N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+    #     complexity = np.multiply(2, K)
+    #     accuracy = np.multiply(N, np.log(self.RSS))
+    #     AIC = np.subtract(complexity, accuracy)
+    #     w = 1/AIC
+    #     self.W = w/np.sum(w)
+    #     # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, W)
+    #     return self.W
 
     def weights(self, s):
         """Computes the weights for the estimators based on the Akaike Information Criterion"""
-        K = np.array([e.count_parameters() for e in self.estimators]).T
-        N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
-        complexity = np.multiply(2, K)
-        accuracy = np.multiply(N, np.log(self.RSS))
-        AIC = np.subtract(complexity, accuracy)
-        w = 1/AIC
+        if self.weights_method == "exponential":
+            K = np.array([e.count_parameters() for e in self.estimators]).T
+            N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+            complexity = np.multiply(2, K)
+            accuracy = np.multiply(N, np.log(self.RSS))
+            AIC = np.subtract(complexity, accuracy)
+            aic = np.min(AIC)
+            w = np.exp(np.subtract(aic, AIC)/2)
+        elif self.weights_method == "weighted_average":
+            K = np.array([e.count_parameters() for e in self.estimators]).T
+            N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+            complexity = np.multiply(2, K)
+            accuracy = np.multiply(N, np.log(self.RSS))
+            AIC = np.subtract(complexity, accuracy)
+            w = 1/AIC
         self.W = w/np.sum(w)
         # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, W)
         return self.W

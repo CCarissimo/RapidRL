@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 GRIDWORLD = "WILLEMSEN"
 AGENT_TYPE = "NOVELTOR"
-ANIMATE = False
+ANIMATE = True
 MAX_STEPS = 100
 EPISODE_TIMEOUT = 34
 GAMMA = 0.8
@@ -42,7 +42,14 @@ elif GRIDWORLD == "POOL":
 env = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 env_greedy = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 
-states = [(1, j) for j in range(env.grid_width)]
+if GRIDWORLD == "WILLEMSEN":
+    states = [(1, j) for j in range(env.grid_width)]
+    env_shape = (1, env.grid_width)
+elif GRIDWORLD == "POOL":
+    states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
+    env_shape = (env.grid_height, env.grid_width)
+else:
+    print("WORLD not found")
 
 filterwarnings('ignore')
 
@@ -59,12 +66,45 @@ if AGENT_TYPE == 'NOVELTOR':
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
                 self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
+                # self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
                 reward = 1/(self.Qs.visits[t.state][t.action] + 1) if t.state_ != t.state else 0
                 self.Qe.update_RSS(t.action, reward, t.state_)
+            if greedy:  # use estimator with minimum RSS
+                values = self.Qe.predict(t.state)
+                # print(t, values)
+                return np.random.choice(np.flatnonzero(values == values.max()))
+            else:  # use the AIC combined estimators
+                values = self.Qe.predict(t.state)
+                return np.random.choice(np.flatnonzero(values == values.max()))
+
+        def update(self, transitions):
+            for t in transitions:
+                self.Qe.update(t)
+
+elif AGENT_TYPE == 'PSEUDOCOUNT':
+    class ME_AIC_Learner:
+        def __init__(self):
+            self.N = MDP.pseudoCountNovelty(features=[MDP.identity, MDP.row, MDP.column], alpha=1)
+            if GRIDWORLD == 'WILLEMSEN':
+                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
+            elif GRIDWORLD == 'POOL':
+                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
+                self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
+
+        def select_action(self, t, greedy=False):
+            if t.action != 'initialize':
+                novelty = self.N.evaluate(t.state) if t.state_ != t.state else 0
+                self.Qe.update_RSS(t.action, novelty, t.state_)
             if greedy: # use estimator with minimum RSS
                 values = self.Qe.predict(t.state)
                 # print(t, values)
@@ -76,7 +116,6 @@ if AGENT_TYPE == 'NOVELTOR':
         def update(self, transitions):
             for t in transitions:
                 self.Qe.update(t)
-
 else:
     class ME_AIC_Learner:
         def __init__(self):
@@ -145,14 +184,14 @@ for i in range(MAX_STEPS):
 
     V_vector = [max(q) for q in Q_matrix]
     # print(V_vector)
-    imV = np.reshape(V_vector, (1, env.grid_width)).T
+    imV = np.reshape(V_vector, (env_shape[0], env_shape[1])).T
     A_vector = [np.argmax(q) for q in Q_matrix]
-    imA = np.reshape(A_vector, (1, env.grid_width)).T
+    imA = np.reshape(A_vector, (env_shape[0], env_shape[1])).T
 
     K = [e.count_parameters() for e in agent.Qe.estimators]
     RSS = agent.Qe.RSS
 
-    print(agent.Ql.mx, agent.Ql.my)
+    # print(agent.Ql.mx, agent.Ql.my)
 
     metrics.append({
         't': i,
@@ -194,6 +233,7 @@ for i, metric in enumerate(metrics):
 cumEpilen = np.cumsum([ele[0] for ele in epilen])
 cumEpiG = np.cumsum([ele[1] for ele in epilen])
 
+# plt.figure(0)
 fig, (ax1, ax2) = plt.subplots(nrows=2, figsize=(10, 5))
 ax1.plot(x, yn, label='exploring')
 
@@ -208,11 +248,13 @@ ax2.set_ylabel('trajectory length')
 ax2.scatter(cumEpilen, [ele[0] for ele in epilen], s=5)
 ax2.scatter(cumEpiG, [ele[1] for ele in epilen], s=5)
 MDP.plt.tight_layout()
-plt.show()
+# plt.show()
 
 # PLOT Estimator Evolution over time #
 
 labels = [type(e.mask).__name__ for e in agent.Qe.estimators[:-1]] + ['linear']
+
+plt.figure(2)
 W = []
 for i in range(len(agent.Qe.estimators)):
     w = [ele['W'][i] for ele in metrics]
@@ -220,8 +262,9 @@ for i in range(len(agent.Qe.estimators)):
     plt.plot(w, label=labels[i])
 plt.title('W over time')
 plt.legend()
-plt.show()
+# plt.show()
 
+plt.figure(3)
 K = []
 for i in range(len(agent.Qe.estimators)):
     k = [ele['K'][i] for ele in metrics]
@@ -229,24 +272,25 @@ for i in range(len(agent.Qe.estimators)):
     plt.plot(k, label=labels[i])
 plt.title('K over time')
 plt.legend()
-plt.show()
+# plt.show()
 
-
+plt.figure(3)
 for i in range(len(agent.Qe.estimators)):
     RSS = [ele['RSS'][i] for ele in metrics]
     plt.plot(RSS, label=labels[i])
 plt.title('RSS over time')
 plt.legend()
-plt.show()
+# plt.show()
 
 
 # Complexity PLOT
+plt.figure(4)
 W = np.array(W)
 K = np.array(K)
 C = (W * K).sum(axis=0)  # matrix product
 plt.title('Complexity over time')
 plt.plot(C)
-plt.show()
+# plt.show()
 
 
 def overlay_actions(A):
@@ -295,15 +339,16 @@ def evaluate(ag, Env, n_episodes, greedy=True):
     return T, G
 
 
+print(metrics[-1]['V'])
+print(metrics[-1]['A'])
+# plt.figure(5)
 fig, ax = plt.subplots()
 im = ax.imshow(metrics[-1]['V'], origin='lower')
 ann_list = []
 overlay_actions(metrics[-1]['A'])
 plt.axis('off')
-plt.show()
-print(metrics[-1]['V'])
-print(metrics[-1]['A'])
 
+plt.show()
 
 # ANIMATION
 
@@ -347,5 +392,5 @@ if ANIMATE:
 
     # HTML(ani.to_jshtml())
     Writer = animation.writers['ffmpeg']
-    writer = Writer(fps=15, metadata=dict(artist='Michael Kaisers'), bitrate=-1)
-    ani.save(f"V_animation_{FILE_SIG}_-{VISUALISE_METRIC}.mp4", writer=writer)
+    writer = Writer(fps=15, metadata=dict(artist='Michael Kaisers'), bitrate=100)
+    ani.save(f"V_animation_{FILE_SIG}_-{VISUALISE_METRIC}.mp4", writer=writer)  # extra_args=['-vcodec', 'libx264']

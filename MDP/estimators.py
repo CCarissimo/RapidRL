@@ -156,13 +156,14 @@ class pseudoCountNovelty:
         self.t += 1
 
     def evaluate(self, s):
+        """evaluation function for pseudo-counts by estimating feature occurrences"""
         C = [mask.apply(s) for mask in self.features]
-        rho = np.array([self.table[c] for c in C])/self.t
+        rho = np.array([self.table[c] for c in C])/self.t  # features before observation
         self.update(s)
-        rho_ = np.array([self.table[c] for c in C])/self.t
+        rho_ = np.array([self.table[c] for c in C])/self.t  # features after observation
         pseudoCount = rho * (1 - rho_) / (rho_ - rho)
         return self.alpha/np.sqrt(pseudoCount)
-        
+
 
 class CombinedActionEstimator:
     def __init__(self, estimators):

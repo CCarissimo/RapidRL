@@ -52,7 +52,8 @@ if AGENT_TYPE == 'NOVELTOR':
             if GRIDWORLD == 'WILLEMSEN':
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
+                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL':
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
@@ -82,7 +83,8 @@ else:
             if GRIDWORLD == 'WILLEMSEN':
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
+                self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL':
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
@@ -150,6 +152,8 @@ for i in range(MAX_STEPS):
     K = [e.count_parameters() for e in agent.Qe.estimators]
     RSS = agent.Qe.RSS
 
+    print(agent.Ql.mx, agent.Ql.my)
+
     metrics.append({
         't': i,
         'V': imV,
@@ -208,7 +212,7 @@ plt.show()
 
 # PLOT Estimator Evolution over time #
 
-labels = [type(e.mask).__name__ for e in agent.Qe.estimators]
+labels = [type(e.mask).__name__ for e in agent.Qe.estimators[:-1]] + ['linear']
 W = []
 for i in range(len(agent.Qe.estimators)):
     w = [ele['W'][i] for ele in metrics]

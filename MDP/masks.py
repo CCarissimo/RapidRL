@@ -5,7 +5,7 @@ class Mask(ABC):
     def __init__(self):
         pass
 
-    def apply(self, transition):
+    def apply(self, state):
         pass
 
 

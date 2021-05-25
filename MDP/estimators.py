@@ -73,29 +73,96 @@ class N_table(Q_table):
 
 
 class LinearEstimator:
-    def __init__(self, actions=None):
+    def __init__(self, alpha, gamma, b=0, actions=None):
         if actions is None:
             self.actions = {'up': 0, 'down': 1, 'left': 2, 'right': 3}
+        self.alpha = alpha
+        self.gamma = gamma
         self.n = 0
-        self.P = np.zeros((len(self.actions), 2))
+        self.mx = 0
+        self.my = 0
+        self.b = b
 
     def update(self, t):
-        # update rule
+        """function to update the parameters of our linear estimator"""
+        y, x = t.state
+        if t.action in [0, 1]:  # up or down
+            neg = -1 if t.action == 0 else 1
+            self.my = self.my + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+                                              - self.polynomial(x, y) - neg * self.my)
+        elif t.action in [2, 3]:  # left or right
+            neg = -1 if t.action == 2 else 1
+            self.mx = self.mx + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+                                              - self.polynomial(x, y) - neg * self.mx)
         self.n += 1
 
-    def evaluate(self, s):
-        c = self.mask.apply(s)
-        return self.table[c]
+    def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
+        """takes the x and y positions on the grid to evaluate the value of a particular state"""
+        return self.mx * x + self.my * y + self.b
+
+    def evaluate(self, s):  # returns an array of size len(actions)
+        y, x = s
+        V = np.array([
+            self.polynomial(x, y - 1),  # up
+            self.polynomial(x, y + 1),  # down
+            self.polynomial(x - 1, y),  # left
+            self.polynomial(x + 1, y)   # right
+        ])
+        return V
 
     def get_visits(self, s):
         return self.n
 
-    def UCB_bonus(self, s):
-        return np.sqrt(np.log(1 + self.n) / (1 + self.visits[s]))  # * UCB Exploration COEFFICIENT
-
     def count_parameters(self):
-        return len(self.table) * len(self.actions) + 1  # 1 residual for the estimator, more if local RSS
+        return 3  
 
+
+class LinearNoveltyEstimator(LinearEstimator):
+    def __init__(self, alpha, gamma, b=0, actions=None):
+        super().__init__(alpha=alpha, gamma=gamma, b=b, actions=actions)
+        self.visits = defaultdict(lambda: np.zeros(len(self.actions)))
+
+    def update(self, t):
+        """function to update the parameters of our linear estimator"""
+        if t.terminal or t.state == t.state_:
+            novelty = 0
+        else:
+            novelty = 1 / (self.visits[t.state][t.action]+1)
+
+        y, x = t.state
+        if t.action in [0, 1]:  # up or down
+            neg = -1 if t.action == 0 else 1
+            self.my = self.my + self.alpha * (novelty + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+                                              - self.polynomial(x, y) - neg * self.my)
+        elif t.action in [2, 3]:  # left or right
+            neg = -1 if t.action == 2 else 1
+            self.mx = self.mx + self.alpha * (novelty + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+                                              - self.polynomial(x, y) - neg * self.mx)
+        self.n += 1
+        self.visits[t.state] += 1
+
+
+class pseudoCountNovelty:
+    def __init__(self, features: list, alpha: float):
+        self.features = features
+        self.table = defaultdict(lambda: float(0))
+        self.alpha = alpha
+        self.t = 1
+
+    def update(self, s):
+        for mask in self.features:
+            c = mask.apply(s)
+            self.table[c] += 1
+        self.t += 1
+
+    def evaluate(self, s):
+        C = [mask.apply(s) for mask in self.features]
+        rho = np.array([self.table[c] for c in C])/self.t
+        self.update(s)
+        rho_ = np.array([self.table[c] for c in C])/self.t
+        pseudoCount = rho * (1 - rho_) / (rho_ - rho)
+        return self.alpha/np.sqrt(pseudoCount)
+        
 
 class CombinedActionEstimator:
     def __init__(self, estimators):

@@ -3,10 +3,10 @@ import MDP
 from warnings import filterwarnings
 import matplotlib.pyplot as plt
 
-GRIDWORLD = "WILLEMSEN"
-AGENT_TYPE = "LINEAR_NOVELTOR"
+GRIDWORLD = "POOL"
+AGENT_TYPE = "LINEAR_RMAX"
 ANIMATE = False
-MAX_STEPS = 100
+MAX_STEPS = 1000
 EPISODE_TIMEOUT = 32
 GAMMA = 0.8
 ALPHA = 0.1
@@ -235,7 +235,7 @@ elif AGENT_TYPE == "RMAX":
             for t in transitions:
                 self.Qe.update(t)
 
-elif AGENT_TYPE == "LINEAR(RMAX)":
+elif AGENT_TYPE == "LINEAR_RMAX":
     class ME_AIC_Learner:
         def __init__(self):
             if GRIDWORLD == 'WILLEMSEN':
@@ -244,11 +244,12 @@ elif AGENT_TYPE == "LINEAR(RMAX)":
                 self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=0.9, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL':
-                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=0.9,
+                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.identity())
+                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.global_context())
+                self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.column())
+                self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.row())
+                self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=0.9,
                                           weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):

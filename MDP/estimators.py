@@ -82,19 +82,29 @@ class LinearEstimator:
         self.mx = 0
         self.my = 0
         self.b = b
+        self.W = np.array([self.mx, self.my, self.b]).T
 
     def update(self, t):
         """function to update the parameters of our linear estimator"""
         y, x = t.state
-        if t.action in [0, 1]:  # up or down
-            neg = -1 if t.action == 0 else 1
-            self.my = self.my + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.my)
-        elif t.action in [2, 3]:  # left or right
-            neg = -1 if t.action == 2 else 1
-            self.mx = self.mx + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.mx)
+        y_hat = self.polynomial(x, y)
+        y = t.reward + self.gamma * (np.max(np.abs(self.W[:-1])) + self.b)
+        X = np.array([x, y, 1]).T
+        self.W = self.W - 2 * self.alpha * X * (y_hat - y) 
         self.n += 1
+
+    # def update(self, t):
+    #     """function to update the parameters of our linear estimator"""
+    #     y, x = t.state
+    #     if t.action in [0, 1]:  # up or down
+    #         neg = -1 if t.action == 0 else 1
+    #         self.my = self.my + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+    #                                           - self.polynomial(x, y) - neg * self.my)
+    #     elif t.action in [2, 3]:  # left or right
+    #         neg = -1 if t.action == 2 else 1
+    #         self.mx = self.mx + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+    #                                           - self.polynomial(x, y) - neg * self.mx)
+    #     self.n += 1
 
     def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
         """takes the x and y positions on the grid to evaluate the value of a particular state"""
@@ -130,14 +140,10 @@ class LinearNoveltyEstimator(LinearEstimator):
             novelty = 1 / (self.visits[t.state][t.action]+1)
 
         y, x = t.state
-        if t.action in [0, 1]:  # up or down
-            neg = -1 if t.action == 0 else 1
-            self.my = self.my + self.alpha * (novelty + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.my)
-        elif t.action in [2, 3]:  # left or right
-            neg = -1 if t.action == 2 else 1
-            self.mx = self.mx + self.alpha * (novelty + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.mx)
+        y_hat = self.polynomial(x, y)
+        y = novelty + self.gamma * (np.max(np.abs(self.W[:-1])) + self.b)
+        X = np.array([x, y, 1]).T
+        self.W = self.W - 2 * self.alpha * X * (y_hat - y) 
         self.n += 1
         self.visits[t.state] += 1
 
@@ -221,20 +227,20 @@ class CombinedAIC:
 
     def weights(self, s):
         """Computes the weights for the estimators based on the Akaike Information Criterion"""
+        K = np.array([e.count_parameters() for e in self.estimators]).T
+        N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+        complexity = np.multiply(2, K)
+        accuracy = np.multiply(N, np.log(self.RSS))
         if self.weights_method == "exponential":
-            K = np.array([e.count_parameters() for e in self.estimators]).T
-            N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
-            complexity = np.multiply(2, K)
-            accuracy = np.multiply(N, np.log(self.RSS))
+            AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            aic = np.min(AIC)
+            w = np.exp(np.subtract(aic, AIC)/2)
+        elif self.weights_method == "exp_size_corrected":
             AIC = np.add(complexity, accuracy) + (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
             aic = np.min(AIC)
             w = np.exp(np.subtract(aic, AIC)/2)
         elif self.weights_method == "weighted_average":
-            K = np.array([e.count_parameters() for e in self.estimators]).T
-            N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
-            complexity = np.multiply(2, K)
-            accuracy = np.multiply(N, np.log(self.RSS))
-            AIC = np.add(complexity, accuracy) + (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
             w = 1/AIC
         # baselines to compare our methods to
         # w_biased = sqrt(b/(n_u+b))

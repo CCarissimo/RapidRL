@@ -32,12 +32,54 @@ As of now we have several implementations of tabular q learning that tackle thes
 
 ##### Recent bug-fixes:
 
-- AIC = 2k + n ln(RSS), and n is now set to the total updates for an estimator, not state specific, since we only have one RSS value for each estimator
+- We minimize AIC = 2k + n ln(RSS), and n is now set to the total updates for an estimator, not state specific, since we only have one RSS value for each estimator
 - prev_W in predict is now only saved when we select actions. We were predicting on all states to save data in the training loop and this was messing up our RSS values for weights. 
 
 #### Future
 
 We would like to show that our estimator combination works better for decision making under uncertainty, and thus works better for exploration. We would like to implement an exploration scheme that is not based on randomness, but rather is based on abstraction and generalisation. We need to define what we see as exploiting and what we see as exploring. We may create another gridworld that we can use to show the effectiveness of our estimator combinations. We will be done if our estimator combinations are able to successfully solve an environment many times faster and more efficiently than a vanilla q table learner. Solving an environment we can define as getting the maximum payoff when exploiting. 
+
+##### A) Performance and complexity of Combined Estimation under $\epsilon$-greedy exploration
+
+###### Illustration of the reward plateau
+
+$AIC_i = 2k_i + n \ln(RSS_i)$, where k is the number of fitted parameters (including 1 global variance parameter)
+
+$W_i = \exp((AIC_{min}-AIC_{i})/2)$
+
+Potential Extensions:
+
+- Dense Reward Environments
+- State specific variance/RSS estimates
+- Dueling Q-learning (with value estimates) as baseline
+- SARSA
+- Expected SARSA
+- Boltzmann Exploration
+
+Baselines:
+
+- Dueling Q-Learning
+
+Experiments:
+
+- STRAIGHT gridworld with Identity, Global, Linear estimators
+
+- WILLEMSEN gridworld with Identity, Global, Linear estimators
+- POOL gridworld with Identity, Global, Row, Column, Linear
+
+##### B) Add Novelty as an Intrinsic Reward
+
+$N = 1/n_s$
+
+Extensions:
+
+- $N = \exp(-n_s)$
+- $N = n_s^{-b}$
+- Pseudo-count novelty
+
+##### C) Effect of Novelty based Exploration with multi-level Novelty Estimates
+
+Using Novelty specific Estimators to define the exploration policy, then exploiting with reward based estimators. 
 
 ##### Novelty
 

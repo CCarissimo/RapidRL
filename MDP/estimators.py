@@ -228,20 +228,21 @@ class CombinedAIC:
     def weights(self, s):
         """Computes the weights for the estimators based on the Akaike Information Criterion"""
         K = np.array([e.count_parameters() for e in self.estimators]).T
-        N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+        # N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+        N = np.array([e.n for e in self.estimators]).T
         complexity = np.multiply(2, K)
         accuracy = np.multiply(N, np.log(self.RSS))
         if self.weights_method == "exponential":
-            AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
-            aic = np.min(AIC)
-            w = np.exp(np.subtract(aic, AIC)/2)
+            self.AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            aic = np.min(self.AIC)
+            w = np.exp(np.subtract(aic, self.AIC)/2)
         elif self.weights_method == "exp_size_corrected":
-            AIC = np.add(complexity, accuracy) + (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
-            aic = np.min(AIC)
-            w = np.exp(np.subtract(aic, AIC)/2)
+            self.AIC = np.add(complexity, accuracy) + (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            aic = np.min(self.AIC)
+            w = np.exp(np.subtract(aic, self.AIC)/2)
         elif self.weights_method == "weighted_average":
-            AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
-            w = 1/AIC
+            self.AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            w = 1/self.AIC
         # baselines to compare our methods to
         # w_biased = sqrt(b/(n_u+b))
         # n_b/(n_u + n_b + 4*n_u*n_b*b)
@@ -249,21 +250,23 @@ class CombinedAIC:
         # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, self.W)
         return self.W
 
-    def predict(self, s):
+    def predict(self, s, store=True):
         V = np.array([e.evaluate(s) for e in self.estimators]).T
-        self.prev_V = V
-        self.prev_W = self.weights(s)
+        if store:
+            self.prev_V = V
+            self.prev_W = self.weights(s)
         # print('predict', V, self.prev_W)
         return np.dot(V, self.prev_W)  # Matrix @ Vector dot product
 
     def update_RSS(self, a, r, s_): # un-discounted reward
         V = np.array([e.evaluate(s_) for e in self.estimators]).T
+        # print("V", V.T, self.prev_V.T)
         Qsa = self.prev_V[a]  # check that this is a vector
         maxQs_a_ = np.max(np.dot(V, self.prev_W))  # check that this is a vector
         e = r + self.gamma * maxQs_a_ - Qsa
         e2 = np.power(e, 2)
         self.RSS = np.multiply((1-self.alpha), self.RSS) + np.multiply(self.alpha, e2)
-        # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
+        # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
         return self.RSS
 
     def update(self, t):

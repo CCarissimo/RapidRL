@@ -4,9 +4,9 @@ from warnings import filterwarnings
 import matplotlib.pyplot as plt
 import tqdm
 
-GRIDWORLD = "POOL"
-AGENT_TYPE = "NOVELTOR"
-ANIMATE = True
+GRIDWORLD = "WILLEMSEN"
+AGENT_TYPE = "VANILLA"
+ANIMATE = False
 MAX_STEPS = 1000
 EPISODE_TIMEOUT = 32
 GAMMA = 0.8
@@ -15,9 +15,9 @@ BATCH_SIZE = 1
 WEIGHTS_METHOD = "exponential"
 EXPLOIT = False
 
-FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]" \
-           f"_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
+FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
 print(FILE_SIG)
+
 if GRIDWORLD == "WILLEMSEN":
     grid = np.ones((3, 9)) * -1
     grid[1, :8] = 0

@@ -4,17 +4,18 @@ from warnings import filterwarnings
 import matplotlib.pyplot as plt
 import tqdm
 
-GRIDWORLD = "POOL"
-AGENT_TYPE = "LINEAR_NOVELTOR"
+GRIDWORLD = "STRAIGHT"
+AGENT_TYPE = "VANILLA"
 ANIMATE = False
-MAX_STEPS = 1000
+MAX_STEPS = 10000
 EPISODE_TIMEOUT = 32
 GAMMA = 0.8
-ALPHA = 0.2
-BATCH_SIZE = 1
+ALPHA = 0.5
+BATCH_SIZE = 10
 WEIGHTS_METHOD = "exp_size_corrected"
-EXPLOIT = True
+EXPLOIT = False
 
+FOLDER = "\\MDP"
 FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
 print(FILE_SIG)
 
@@ -25,6 +26,19 @@ if GRIDWORLD == "WILLEMSEN":
     grid[2, :8] = 0
     terminal_state = []
     for i in [0, 2]:
+        for j in range(8):
+            terminal_state.append([i, j])
+    terminal_state.append([1, 8])
+    terminal_state = np.array(terminal_state)
+    initial_state = np.array([1, 0])
+    blacked_state = np.array([[0, 8], [2, 8]])
+elif GRIDWORLD == "STRAIGHT":
+    grid = np.ones((3, 9)) * -1
+    grid[1, :8] = 0
+    grid[1, 8] = 1
+    grid[2, :8] = 0.1
+    terminal_state = []
+    for i in [0]:
         for j in range(8):
             terminal_state.append([i, j])
     terminal_state.append([1, 8])
@@ -45,7 +59,7 @@ elif GRIDWORLD == "POOL":
 env = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 env_greedy = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 
-if GRIDWORLD == "WILLEMSEN":
+if GRIDWORLD == "WILLEMSEN" or GRIDWORLD == "STRAIGHT":
     states = [(1, j) for j in range(env.grid_width)]
     env_shape = (1, env.grid_width)
 elif GRIDWORLD == "POOL":
@@ -60,7 +74,7 @@ if AGENT_TYPE == 'NOVELTOR':
     class ME_AIC_Learner:
         def __init__(self):
             self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-            if GRIDWORLD == 'WILLEMSEN':
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Ns = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Ng = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qe = MDP.CombinedAIC([self.Ns, self.Ng], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
@@ -92,7 +106,7 @@ if AGENT_TYPE == 'NOVELTOR':
 elif AGENT_TYPE == 'LINEAR_NOVELTOR':
     class ME_AIC_Learner:
         def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN':
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
@@ -102,8 +116,8 @@ elif AGENT_TYPE == 'LINEAR_NOVELTOR':
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
                 self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                # self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
@@ -125,7 +139,7 @@ elif AGENT_TYPE == 'PSEUDOCOUNT':
     class ME_AIC_Learner:
         def __init__(self):
             self.N = MDP.pseudoCountNovelty(features=[MDP.identity, MDP.row, MDP.column], alpha=1)
-            if GRIDWORLD == 'WILLEMSEN':
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
@@ -156,7 +170,7 @@ elif AGENT_TYPE == 'PSEUDOCOUNT':
 elif AGENT_TYPE == "LINEAR":
     class ME_AIC_Learner:
         def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN':
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA)
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
@@ -186,7 +200,7 @@ elif AGENT_TYPE == "LINEAR":
 elif AGENT_TYPE == "VANILLA":
     class ME_AIC_Learner:
         def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN':
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
@@ -198,7 +212,7 @@ elif AGENT_TYPE == "VANILLA":
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
-            if t.action != 'initialize':
+            if t.action != 'initialize' and not greedy:
                 self.Qe.update_RSS(t.action, t.reward, t.state_)
 
             if greedy:  # use estimator with minimum RSS
@@ -215,7 +229,7 @@ elif AGENT_TYPE == "VANILLA":
 elif AGENT_TYPE == "RMAX":
     class ME_AIC_Learner:
         def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN':
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=MDP.global_context())
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
@@ -244,7 +258,7 @@ elif AGENT_TYPE == "RMAX":
 elif AGENT_TYPE == "LINEAR_RMAX":
     class ME_AIC_Learner:
         def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN':
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.global_context())
                 self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
@@ -309,8 +323,13 @@ for i in tqdm.tqdm(range(MAX_STEPS)):
 
     step += 1
 
+    RSS = agent.Qe.RSS
+    AIC = agent.Qe.AIC
+
+    K = [e.count_parameters() for e in agent.Qe.estimators]
+
     # Q_matrix = np.zeros((env.grid_height, env.grid_width, 4))
-    Q_matrix = [agent.Qe.predict(s) for s in states]
+    Q_matrix = [agent.Qe.predict(s, store=False) for s in states]
 
     V_vector = [max(q) for q in Q_matrix]
     # print(V_vector)
@@ -318,8 +337,8 @@ for i in tqdm.tqdm(range(MAX_STEPS)):
     A_vector = [np.argmax(q) for q in Q_matrix]
     imA = np.reshape(A_vector, (env_shape[0], env_shape[1])).T
 
-    K = [e.count_parameters() for e in agent.Qe.estimators]
-    RSS = agent.Qe.RSS
+    
+    
 
     # print(imV)
 
@@ -333,6 +352,7 @@ for i in tqdm.tqdm(range(MAX_STEPS)):
         'W': agent.Qe.W,
         'K': K,
         'RSS': RSS,
+        'AIC': AIC,
         'steps': step
     })
 
@@ -378,7 +398,7 @@ ax2.set_ylabel('trajectory length')
 ax2.scatter(cumEpilen, [ele[0] for ele in epilen], s=5)
 ax2.scatter(cumEpiG, [ele[1] for ele in epilen], s=5)
 MDP.plt.tight_layout()
-plt.savefig(f'{AGENT_TYPE}\\G_{FILE_SIG}.png')
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\G_{FILE_SIG}.png')
 
 # PLOT Estimator Evolution over time #
 
@@ -395,7 +415,7 @@ for i in range(len(agent.Qe.estimators)):
     plt.plot(w, label=labels[i])
 plt.title('W over time')
 plt.legend()
-plt.savefig(f'{AGENT_TYPE}\\W_{FILE_SIG}.png')
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\W_{FILE_SIG}.png')
 
 plt.figure(3)
 K = []
@@ -405,7 +425,7 @@ for i in range(len(agent.Qe.estimators)):
     plt.plot(k, label=labels[i])
 plt.title('K over time')
 plt.legend()
-plt.savefig(f'{AGENT_TYPE}\\K_{FILE_SIG}.png')
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\K_{FILE_SIG}.png')
 
 plt.figure(4)
 for i in range(len(agent.Qe.estimators)):
@@ -413,7 +433,7 @@ for i in range(len(agent.Qe.estimators)):
     plt.plot(RSS, label=labels[i])
 plt.title('RSS over time')
 plt.legend()
-plt.savefig(f'{AGENT_TYPE}\\RSS_{FILE_SIG}.png')
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\RSS_{FILE_SIG}.png')
 
 
 # Complexity PLOT
@@ -421,9 +441,9 @@ plt.figure(5)
 W = np.array(W)
 K = np.array(K)
 C = (W * K).sum(axis=0)  # matrix product
-plt.title('Complexity overf ftfifme')
+plt.title('Complexity over time')
 plt.plot(C)
-plt.savefig(f'{AGENT_TYPE}\\totK_{FILE_SIG}.png')
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\totK_{FILE_SIG}.png')
 
 
 def overlay_actions(A):
@@ -483,7 +503,7 @@ im = ax.imshow(metrics[-1]['V'], origin='lower')
 ann_list = []
 overlay_actions(metrics[-1]['A'])
 plt.axis('off')
-plt.savefig(f'{AGENT_TYPE}\\V_{FILE_SIG}.png')
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\V_{FILE_SIG}.png')
 
 
 visits = agent.Qs.visits
@@ -491,7 +511,16 @@ hm = MDP.generate_heatmap(grid=env.grid, table=visits, aggf=lambda s: np.sum(s))
 plt.figure(7)
 plt.title(r"Updates Heatmap $\approx$ Visits")
 plt.imshow(hm, origin='lower')
-plt.savefig(f'{AGENT_TYPE}\\Visits_{FILE_SIG}.png')
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\Visits_{FILE_SIG}.png')
+
+
+plt.figure(8)
+plt.title(r"AIC over time")
+for i in range(len(agent.Qe.estimators)):
+    AIC = [ele['AIC'][i] for ele in metrics]
+    plt.plot(AIC, label=labels[i])
+plt.legend()
+plt.savefig(f'{FOLDER}\\{AGENT_TYPE}\\AIC_{FILE_SIG}.png')
 plt.show()
 
 # ANIMATION

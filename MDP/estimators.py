@@ -82,19 +82,29 @@ class LinearEstimator:
         self.mx = 0
         self.my = 0
         self.b = b
+        self.W = np.array([self.mx, self.my, self.b]).T
 
     def update(self, t):
         """function to update the parameters of our linear estimator"""
         y, x = t.state
-        if t.action in [0, 1]:  # up or down
-            neg = -1 if t.action == 0 else 1
-            self.my = self.my + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.my)
-        elif t.action in [2, 3]:  # left or right
-            neg = -1 if t.action == 2 else 1
-            self.mx = self.mx + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.mx)
+        y_hat = self.polynomial(x, y)
+        y = t.reward + self.gamma * (np.max(np.abs(self.W[:-1])) + self.b)
+        X = np.array([x, y, 1]).T
+        self.W = self.W - 2 * self.alpha * X * (y_hat - y) 
         self.n += 1
+
+    # def update(self, t):
+    #     """function to update the parameters of our linear estimator"""
+    #     y, x = t.state
+    #     if t.action in [0, 1]:  # up or down
+    #         neg = -1 if t.action == 0 else 1
+    #         self.my = self.my + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+    #                                           - self.polynomial(x, y) - neg * self.my)
+    #     elif t.action in [2, 3]:  # left or right
+    #         neg = -1 if t.action == 2 else 1
+    #         self.mx = self.mx + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
+    #                                           - self.polynomial(x, y) - neg * self.mx)
+    #     self.n += 1
 
     def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
         """takes the x and y positions on the grid to evaluate the value of a particular state"""
@@ -130,14 +140,10 @@ class LinearNoveltyEstimator(LinearEstimator):
             novelty = 1 / (self.visits[t.state][t.action]+1)
 
         y, x = t.state
-        if t.action in [0, 1]:  # up or down
-            neg = -1 if t.action == 0 else 1
-            self.my = self.my + self.alpha * (novelty + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.my)
-        elif t.action in [2, 3]:  # left or right
-            neg = -1 if t.action == 2 else 1
-            self.mx = self.mx + self.alpha * (novelty + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-                                              - self.polynomial(x, y) - neg * self.mx)
+        y_hat = self.polynomial(x, y)
+        y = novelty + self.gamma * (np.max(np.abs(self.W[:-1])) + self.b)
+        X = np.array([x, y, 1]).T
+        self.W = self.W - 2 * self.alpha * X * (y_hat - y) 
         self.n += 1
         self.visits[t.state] += 1
 
@@ -201,10 +207,11 @@ class CombinedAIC:
         self.estimators = estimators
         self.prev_V = np.zeros(len(self.estimators))
         self.prev_W = np.zeros(len(self.estimators))
-        self.RSS = np.ones(len(self.estimators)) * 0.01
+        self.RSS = np.ones(len(self.estimators))*1e-6
         self.alpha = RSS_alpha
         self.W = np.ones(len(self.estimators))/len(self.estimators)
         self.weights_method = weights_method
+        self.gamma = self.estimators[0].gamma
 
     # def weights(self, s):
     #     """Computes the weights for the estimators based on the Akaike Information Criterion"""
@@ -220,41 +227,46 @@ class CombinedAIC:
 
     def weights(self, s):
         """Computes the weights for the estimators based on the Akaike Information Criterion"""
+        K = np.array([e.count_parameters() for e in self.estimators]).T
+        # N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
+        N = np.array([e.n for e in self.estimators]).T
+        complexity = np.multiply(2, K)
+        accuracy = np.multiply(N, np.log(self.RSS))
         if self.weights_method == "exponential":
-            K = np.array([e.count_parameters() for e in self.estimators]).T
-            N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
-            complexity = np.multiply(2, K)
-            accuracy = np.multiply(N, np.log(self.RSS))
-            AIC = np.subtract(complexity, accuracy)
-            aic = np.min(AIC)
-            w = np.exp(np.subtract(aic, AIC)/2)
+            self.AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            aic = np.min(self.AIC)
+            w = np.exp(np.subtract(aic, self.AIC)/2)
+        elif self.weights_method == "exp_size_corrected":
+            self.AIC = np.add(complexity, accuracy) + (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            aic = np.min(self.AIC)
+            w = np.exp(np.subtract(aic, self.AIC)/2)
         elif self.weights_method == "weighted_average":
-            K = np.array([e.count_parameters() for e in self.estimators]).T
-            N = np.array([np.sum(e.get_visits(s)) for e in self.estimators]).T
-            complexity = np.multiply(2, K)
-            accuracy = np.multiply(N, np.log(self.RSS))
-            AIC = np.subtract(complexity, accuracy)
-            w = 1/AIC
+            self.AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            w = 1/self.AIC
+        # baselines to compare our methods to
+        # w_biased = sqrt(b/(n_u+b))
+        # n_b/(n_u + n_b + 4*n_u*n_b*b)
         self.W = w/np.sum(w)
         # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, self.W)
         return self.W
 
-    def predict(self, s):
+    def predict(self, s, store=True):
         V = np.array([e.evaluate(s) for e in self.estimators]).T
-        self.prev_V = V
-        self.prev_W = self.weights(s)
-        # print('predict', V, self.weights(s))
+        if store:
+            self.prev_V = V
+            self.prev_W = self.weights(s)
+        # print('predict', V, self.prev_W)
         return np.dot(V, self.prev_W)  # Matrix @ Vector dot product
 
     def update_RSS(self, a, r, s_): # un-discounted reward
         V = np.array([e.evaluate(s_) for e in self.estimators]).T
-        gamma = self.estimators[0].gamma
-        Qsa = self.prev_V[a]
-        maxQs_a_ = np.max(np.dot(V, self.prev_W))
-        e = r + gamma * maxQs_a_ - Qsa
+        # print("V", V.T, self.prev_V.T)
+        Qsa = self.prev_V[a]  # check that this is a vector
+        maxQs_a_ = np.max(np.dot(V, self.prev_W))  # check that this is a vector
+        e = r + self.gamma * maxQs_a_ - Qsa
         e2 = np.power(e, 2)
-        self.RSS = np.multiply(self.alpha, self.RSS) + np.multiply((1-self.alpha), e2)
-        # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
+        self.RSS = np.multiply((1-self.alpha), self.RSS) + np.multiply(self.alpha, e2)
+        # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
         return self.RSS
 
     def update(self, t):

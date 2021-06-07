@@ -233,7 +233,7 @@ class CombinedAIC:
         complexity = np.multiply(2, K)
         accuracy = np.multiply(N, np.log(self.RSS))
         if self.weights_method == "exponential":
-            self.AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            self.AIC = np.add(complexity, accuracy)
             aic = np.min(self.AIC)
             w = np.exp(np.subtract(aic, self.AIC)/2)
         elif self.weights_method == "exp_size_corrected":
@@ -241,7 +241,7 @@ class CombinedAIC:
             aic = np.min(self.AIC)
             w = np.exp(np.subtract(aic, self.AIC)/2)
         elif self.weights_method == "weighted_average":
-            self.AIC = np.add(complexity, accuracy) #+ (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            self.AIC = np.add(complexity, accuracy)
             w = 1/self.AIC
         # baselines to compare our methods to
         # w_biased = sqrt(b/(n_u+b))
@@ -266,7 +266,7 @@ class CombinedAIC:
         e = r + self.gamma * maxQs_a_ - Qsa
         e2 = np.power(e, 2)
         self.RSS = np.multiply((1-self.alpha), self.RSS) + np.multiply(self.alpha, e2)
-        # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
+        # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
         return self.RSS
 
     def update(self, t):

@@ -2,7 +2,7 @@
 
 author: Cesare Carissimo
 
-### How do we know we are done? 
+### How do we know we are done?
 
 #### Past
 
@@ -63,7 +63,6 @@ Baselines:
 Experiments:
 
 - STRAIGHT gridworld with Identity, Global, Linear estimators
-
 - WILLEMSEN gridworld with Identity, Global, Linear estimators
 - POOL gridworld with Identity, Global, Row, Column, Linear
 

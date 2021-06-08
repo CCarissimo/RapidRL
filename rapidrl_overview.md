@@ -43,7 +43,7 @@ We would like to show that our estimator combination works better for decision m
 
 ###### Illustration of the reward plateau
 
-$AIC_i = 2k_i + n \ln(RSS_i)$, where k is the number of fitted parameters (including 1 global variance parameter)
+$AIC_i = 2k_i + n \ln(RSS_i)$, where k is the number of fitted parameters (including 1 global variance parameter), and small samples correction
 
 $W_i = \exp((AIC_{min}-AIC_{i})/2)$
 
@@ -77,7 +77,7 @@ Extensions:
 - $N = n_s^{-b}$
 - Pseudo-count novelty
 
-##### C) Effect of Novelty based Exploration with multi-level Novelty Estimates
+##### C) Effect of Novelty based Exploration with Multi-Level Novelty Estimates
 
 Using Novelty specific Estimators to define the exploration policy, then exploiting with reward based estimators. 
 

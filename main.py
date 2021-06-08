@@ -4,16 +4,16 @@ from warnings import filterwarnings
 import matplotlib.pyplot as plt
 import tqdm
 
-GRIDWORLD = "STRAIGHT"
-AGENT_TYPE = "VANILLA"
+GRIDWORLD = "POOL"
+AGENT_TYPE = "NOVELTOR"
 ANIMATE = False
-MAX_STEPS = 10000
+MAX_STEPS = 1000
 EPISODE_TIMEOUT = 32
 GAMMA = 0.8
-ALPHA = 0.5
+ALPHA = 0.2
 BATCH_SIZE = 10
 WEIGHTS_METHOD = "exp_size_corrected"
-EXPLOIT = False
+EXPLOIT = True
 
 FOLDER = "\\MDP"
 FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
@@ -334,7 +334,7 @@ for i in tqdm.tqdm(range(MAX_STEPS)):
     V_vector = [max(q) for q in Q_matrix]
     # print(V_vector)
     imV = np.reshape(V_vector, (env_shape[0], env_shape[1])).T
-    A_vector = [np.argmax(q) for q in Q_matrix]
+    A_vector = [np.argmax(q) for q in Q_matrix]  # randomize the max for ties
     imA = np.reshape(A_vector, (env_shape[0], env_shape[1])).T
 
     
@@ -451,7 +451,7 @@ def overlay_actions(A):
     k = 0
     for i in range(env.grid_width):
         for j in range(env.grid_height):
-            if [j, i] in env.terminal_states:
+            if [j, i] in env.terminal_states:  # check my terminal states 
                 terminal_reward = env.grid[j, i]
                 if len(ann_list) > k:
                     ann_list[k].set_text(f"{terminal_reward:.1f}".lstrip('0'))

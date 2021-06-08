@@ -4,8 +4,8 @@ from warnings import filterwarnings
 import matplotlib.pyplot as plt
 import tqdm
 
-GRIDWORLD = "POOL"
-AGENT_TYPE = "NOVELTOR"
+GRIDWORLD = "WILLEMSEN"
+AGENT_TYPE = "SIMPLE_Q"
 ANIMATE = False
 MAX_STEPS = 1000
 EPISODE_TIMEOUT = 32
@@ -13,9 +13,10 @@ GAMMA = 0.8
 ALPHA = 0.2
 BATCH_SIZE = 10
 WEIGHTS_METHOD = "exp_size_corrected"
-EXPLOIT = True
+EXPLOIT = False
+EPSILON = 0.1
 
-FOLDER = "\\MDP"
+FOLDER = "MDP"
 FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
 print(FILE_SIG)
 
@@ -197,9 +198,44 @@ elif AGENT_TYPE == "LINEAR":
             for t in transitions:
                 self.Qe.update(t)
 
-elif AGENT_TYPE == "VANILLA":
+elif AGENT_TYPE == "SIMPLE_Q":
     class ME_AIC_Learner:
         def __init__(self):
+            self.epsilon = EPSILON
+            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
+                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                # self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                self.Qe = MDP.CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+            elif GRIDWORLD == 'POOL':
+                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+                # self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
+                # self.Qc = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
+                # self.Qr = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
+                self.Qe = MDP.CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+
+        def select_action(self, t, greedy=False):
+            if t.action != 'initialize':# and not greedy:
+                self.Qe.update_RSS(t.action, t.reward, t.state_)
+
+            if greedy:  # use estimator with minimum RSS
+                values = self.Qe.predict(t.state)
+                return np.random.choice(np.flatnonzero(values == values.max()))
+            else:  # use the AIC combined estimators
+                values = self.Qe.predict(t.state)
+                if np.random.random() > 1 - self.epsilon:
+                    return np.random.randint(low=0, high=3)  # picks a random action
+                else:
+                    return np.random.choice(np.flatnonzero(values == values.max()))  # picks the 'best' action
+                # print(values, t.state)
+
+        def update(self, transitions):
+            for t in transitions:
+                self.Qe.update(t)
+
+elif AGENT_TYPE == "ME_Q":
+    class ME_AIC_Learner:
+        def __init__(self):
+            self.epsilon = EPSILON
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
@@ -219,7 +255,10 @@ elif AGENT_TYPE == "VANILLA":
                 values = self.Qe.predict(t.state)
                 return np.random.choice(np.flatnonzero(values == values.max()))
             else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
+                if np.random.random() > 1 - self.epsilon:
+                    values = np.zeros(4)  # picks a random action
+                else:
+                    values = self.Qe.predict(t.state)  # picks the 'best' action
                 return np.random.choice(np.flatnonzero(values == values.max()))
 
         def update(self, transitions):

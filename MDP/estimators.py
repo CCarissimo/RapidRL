@@ -73,11 +73,12 @@ class N_table(Q_table):
 
 
 class LinearEstimator:
-    def __init__(self, alpha, gamma, b=0, actions=None):
+    def __init__(self, alpha, gamma, mask, b=0, actions=None):
         if actions is None:
             self.actions = {'up': 0, 'down': 1, 'left': 2, 'right': 3}
         self.alpha = alpha
         self.gamma = gamma
+        self.mask = mask
         self.n = 0
         self.mx = 0
         self.my = 0
@@ -86,7 +87,7 @@ class LinearEstimator:
 
     def update(self, t):
         """function to update the parameters of our linear estimator"""
-        y, x = t.state
+        y, x = self.mask.apply(t.state)
         y_hat = self.polynomial(x, y)
         y = t.reward + self.gamma * (np.max(np.abs(self.W[:-1])) + self.b)
         X = np.array([x, y, 1]).T
@@ -111,7 +112,7 @@ class LinearEstimator:
         return self.mx * x + self.my * y + self.b
 
     def evaluate(self, s):  # returns an array of size len(actions)
-        y, x = s
+        y, x = self.mask.apply(s)
         V = np.array([
             self.polynomial(x, y - 1),  # up
             self.polynomial(x, y + 1),  # down

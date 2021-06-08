@@ -14,6 +14,10 @@ class identity(Mask):
         context = state
         return context
 
+class linear(Mask):
+    def apply(self, state):
+        context = state
+        return context
 
 class arrival_state(Mask):
     def apply(self, transition):

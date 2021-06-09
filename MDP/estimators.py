@@ -109,7 +109,7 @@ class LinearEstimator:
 
     def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
         """takes the x and y positions on the grid to evaluate the value of a particular state"""
-        return self.mx * x + self.my * y + self.b
+        return self.W[0] * x + self.W[1] * y + self.W[2]
 
     def evaluate(self, s):  # returns an array of size len(actions)
         y, x = self.mask.apply(s)
@@ -129,8 +129,8 @@ class LinearEstimator:
 
 
 class LinearNoveltyEstimator(LinearEstimator):
-    def __init__(self, alpha, gamma, b=0, actions=None):
-        super().__init__(alpha=alpha, gamma=gamma, b=b, actions=actions)
+    def __init__(self, alpha, gamma, mask, b=0, actions=None):
+        super().__init__(alpha=alpha, gamma=gamma, mask=mask, b=b, actions=actions)
         self.visits = defaultdict(lambda: np.zeros(len(self.actions)))
 
     def update(self, t):
@@ -204,7 +204,7 @@ class CombinedActionEstimator:
 
 
 class CombinedAIC:
-    def __init__(self, estimators, RSS_alpha, weights_method='exponential'):
+    def __init__(self, estimators, RSS_alpha, beta=2, weights_method='exponential'):
         self.estimators = estimators
         self.prev_V = np.zeros(len(self.estimators))
         self.prev_W = np.zeros(len(self.estimators))
@@ -213,6 +213,7 @@ class CombinedAIC:
         self.W = np.ones(len(self.estimators))/len(self.estimators)
         self.weights_method = weights_method
         self.gamma = self.estimators[0].gamma
+        self.beta = beta
 
     # def weights(self, s):
     #     """Computes the weights for the estimators based on the Akaike Information Criterion"""
@@ -236,11 +237,11 @@ class CombinedAIC:
         if self.weights_method == "exponential":
             self.AIC = np.add(complexity, accuracy)
             aic = np.min(self.AIC)
-            w = np.exp(np.subtract(aic, self.AIC)/2)
+            w = np.exp(np.subtract(aic, self.AIC)/self.beta)
         elif self.weights_method == "exp_size_corrected":
             self.AIC = np.add(complexity, accuracy) + (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
             aic = np.min(self.AIC)
-            w = np.exp(np.subtract(aic, self.AIC)/2)
+            w = np.exp(np.subtract(aic, self.AIC)/self.beta)
         elif self.weights_method == "weighted_average":
             self.AIC = np.add(complexity, accuracy)
             w = 1/self.AIC

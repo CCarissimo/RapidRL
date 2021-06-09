@@ -76,7 +76,15 @@ elif GRIDWORLD == "POOL":
     initial_state = np.array([1, 0])
     blacked_state = np.array([[5, 5], [4, 5], [5, 4], [4, 4]])
     # blacked_state = np.array([[np.nan, np.nan], [np.nan, np.nan]])
-
+elif GRIDWORLD == "STAR":
+    grid = np.ones((15, 15)) * 0.1
+    grid[7, 0] = -1
+    grid[14, 7] = -1
+    grid[7, 14] = 1
+    grid[0, 7] = 1
+    terminal_state = np.array([[7,0], [14,7], [7,14], [0,7]])
+    initial_state = np.array([7,7])
+    blacked_state = np.array([np.nan, np.nan])
 # _, _, _, _ = MDP.plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
 env = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
@@ -88,7 +96,7 @@ if GRIDWORLD == "WILLEMSEN":
 elif GRIDWORLD == "STRAIGHT":
     states = [(i, j) for i in [0, 1, 2] for j in range(env.grid_width)]
     env_shape = (3, env.grid_width)
-elif GRIDWORLD == "POOL":
+elif GRIDWORLD == "POOL" or GRIDWORLD == "STAR":
     states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
     env_shape = (env.grid_height, env.grid_width)
 else:
@@ -106,7 +114,7 @@ if AGENT_TYPE == 'NOVELTOR':
                 self.Ns = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Ng = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qe = MDP.CombinedAIC([self.Ns, self.Ng], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Ns = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Ng = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Nc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
@@ -115,7 +123,7 @@ if AGENT_TYPE == 'NOVELTOR':
                 self.Qe = MDP.CombinedAIC([self.Ns, self.Ng, self.Nr, self.Nc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
-            if t.action != 'initialize':
+            if t.action != 'initialize' and greedy:
                 reward = 1/(self.Ns.visits[t.state][t.action] + 1) if t.state_ != t.state else 0
                 self.Qe.update_RSS(t.action, reward, t.state_)
             if greedy:  # use estimator with minimum RSS
@@ -137,18 +145,18 @@ elif AGENT_TYPE == 'LINEAR_NOVELTOR':
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=MDP.linear())
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
                 self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=MDP.linear())
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
-            if t.action != 'initialize':
+            if t.action != 'initialize' and not greedy:
                 reward = 1/(self.Qs.visits[t.state][t.action] + 1) if t.state_ != t.state else 0
                 self.Qe.update_RSS(t.action, reward, t.state_)
             if greedy:  # use estimator with minimum RSS
@@ -172,7 +180,7 @@ elif AGENT_TYPE == 'PSEUDOCOUNT':
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
@@ -180,7 +188,7 @@ elif AGENT_TYPE == 'PSEUDOCOUNT':
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
-            if t.action != 'initialize':
+            if t.action != 'initialize' and not greedy:
                 novelty = self.N.evaluate(t.state) if t.state_ != t.state else 0
                 self.Qe.update_RSS(t.action, novelty, t.state_)
             if greedy:  # use estimator with minimum RSS
@@ -202,7 +210,7 @@ elif AGENT_TYPE == "LINEAR":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA)
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
@@ -232,7 +240,7 @@ elif AGENT_TYPE == "SIMPLE_Q":
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qe = MDP.CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qe = MDP.CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
@@ -266,14 +274,14 @@ elif AGENT_TYPE == "ME_Q":
                 self.Qr = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
                 self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA, mask=MDP.linear())
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
                 self.Qr = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA, mask=MDP.linear())
+                self.Ql = MDP.LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=MDP.linear())
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-
+                
         def select_action(self, t, greedy=False):
             if t.action != 'initialize' and not greedy:
                 self.Qe.update_RSS(t.action, t.reward, t.state_)
@@ -291,6 +299,7 @@ elif AGENT_TYPE == "ME_Q":
         def update(self, transitions):
             for t in transitions:
                 self.Qe.update(t)
+                # self.Qs.update(t)
 
 elif AGENT_TYPE == "RMAX":
     class ME_AIC_Learner:
@@ -299,7 +308,7 @@ elif AGENT_TYPE == "RMAX":
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=MDP.global_context())
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
                 self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
@@ -329,7 +338,7 @@ elif AGENT_TYPE == "LINEAR_RMAX":
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.global_context())
                 self.Ql = MDP.LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
                 self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL':
+            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
                 self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.identity())
                 self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.global_context())
                 self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.column())
@@ -392,8 +401,8 @@ for i in tqdm.tqdm(range(MAX_STEPS)):
     RSS = agent.Qe.RSS
     AIC = agent.Qe.AIC
 
+    # print(agent.Ql.W)
     K = [e.count_parameters() for e in agent.Qe.estimators]
-
     # Q_matrix = np.zeros((env.grid_height, env.grid_width, 4))
     Q_matrix = [agent.Qe.predict(s, store=False) for s in states]
 
@@ -577,7 +586,7 @@ if ANIMATE:
         cax.cla()
         cb = fig.colorbar(im, cax=cax)
         tx.set_text(f'V at {metrics[i]["steps"] / MAX_STEPS * 100:2.0f}% training')
-        
+
         # for j, b in enumerate(bars):
         #     b.set_height(metrics[i]['W'][j])
 

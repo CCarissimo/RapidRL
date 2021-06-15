@@ -15,10 +15,20 @@ parser.add_argument("gridworld", help="specify the name of the environment",
                     type=str)
 parser.add_argument("agent_type", help="specify the agent type",
                     type=str)
+parser.add_argument("--exploit", help="if included agent will alternate between exploration and exploitation to evaluate the learned information", action="store_false")
 parser.add_argument("--plot", help="include if you would like plots", action="store_true")
 parser.add_argument("--animate", help="include if you would like an animation of the value function"
     , action="store_true")
 parser.add_argument("-n", "--max_steps", help="integer: the maximum number of steps, default at 100", type=int, default=100)
+parser.add_argument("--timeout", help="integer: the maximum number of steps for a single trajectory, default at 34", type=int, default=34)
+parser.add_argument("-a", "--alpha", help="float: the alpha value used for updates, default at 0.1", type=float, default=0.1)
+parser.add_argument("--rss_alpha", help="float: the alpha value used for updates in calculating RSS, default at 0.1", type=float, default=0.1)
+parser.add_argument("--lin_alpha", help="float: the alpha value used for updates in polynomial estimators, default at 0.0001", type=float, default=0.0001)
+parser.add_argument("-g", "--gamma", help="float: the discount factor default at 0.9", type=float, default=0.9)
+parser.add_argument("-B", "--batch_size", help="integer: the number of samples used in training batches, default at 10", type=int, default=10)
+parser.add_argument("--weights_method", help="string: method used to calculate weights in estimator combination, default is exp_size_corrected", type=str, default="exp_size_corrected")
+parser.add_argument("-e", "--epsilon", help="float: the exploration parameter for epsilon greedy exploration, default at 0.1", type=float, default=0.1)
+
 args = parser.parse_args()
 
 EXPERIMENT = args.experiment
@@ -27,13 +37,15 @@ AGENT_TYPE = args.agent_type
 PLOT = True if args.plot else False
 ANIMATE = True if args.animate else False
 MAX_STEPS = args.max_steps
-EPISODE_TIMEOUT = 32
-GAMMA = 0.8
-ALPHA = 0.2
-BATCH_SIZE = 10
-WEIGHTS_METHOD = "exp_size_corrected"
-EXPLOIT = True
-EPSILON = 0.1
+EPISODE_TIMEOUT = args.timeout
+GAMMA = args.gamma
+ALPHA = args.alpha
+RSS_ALPHA = args.rss_alpha
+LIN_ALPHA = args.lin_alpha
+BATCH_SIZE = args.batch_size
+WEIGHTS_METHOD = args.weights_method
+EXPLOIT = args.exploit
+EPSILON = args.epsilon
 
 cwd = os.getcwd()
 FOLDER = "%s\\Results" % (cwd)
@@ -108,266 +120,14 @@ print(states)
 
 filterwarnings('ignore')
 
-if AGENT_TYPE == 'NOVELTOR':
-    class ME_AIC_Learner:
-        def __init__(self):
-            self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Qe = CombinedAIC([self.Ns, self.Ng], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Nc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-                self.Nr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-                # self.Nl = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
-                self.Qe = CombinedAIC([self.Ns, self.Ng, self.Nr, self.Nc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+AGENTS = {
+    "SIMPLE_Q": SimpleQ,
+    "ME_Q": MEQ,
+    "NOVELTOR": Noveltor,
+    "RMAX": RMAXQ,
+    }
 
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize' and greedy:
-                reward = 1/(self.Ns.visits[t.state][t.action] + 1) if t.state_ != t.state else 0
-                self.Qe.update_RSS(t.action, reward, t.state_)
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qs.table[t.state]
-                # print(t, values)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qs.update(t)
-                self.Qe.update(t)
-
-elif AGENT_TYPE == 'LINEAR_NOVELTOR':
-    class ME_AIC_Learner:
-        def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Ql = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=linear())
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Qc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-                self.Qr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-                self.Ql = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=linear())
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize' and not greedy:
-                reward = 1/(self.Qs.visits[t.state][t.action] + 1) if t.state_ != t.state else 0
-                self.Qe.update_RSS(t.action, reward, t.state_)
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qe.predict(t.state)
-                # print(t, values)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qe.update(t)
-
-elif AGENT_TYPE == 'PSEUDOCOUNT':
-    class ME_AIC_Learner:
-        def __init__(self):
-            self.N = pseudoCountNovelty(features=[identity, row, column], alpha=1)
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Ql = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Qc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-                self.Qr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize' and not greedy:
-                novelty = self.N.evaluate(t.state) if t.state_ != t.state else 0
-                self.Qe.update_RSS(t.action, novelty, t.state_)
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qe.predict(t.state)
-                # print(t, values)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qe.update(t)
-
-elif AGENT_TYPE == "LINEAR":
-    class ME_AIC_Learner:
-        def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA)
-                self.Qe = CombinedAIC([self.Qs, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-                self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA)
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize':
-                self.Qe.update_RSS(t.action, t.reward, t.state_)
-
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qe.update(t)
-
-elif AGENT_TYPE == "SIMPLE_Q":
-    class ME_AIC_Learner:
-        def __init__(self):
-            self.epsilon = EPSILON
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qe = CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qe = CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize' and not greedy:
-                self.Qe.update_RSS(t.action, t.reward, t.state_)
-
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
-                if np.random.random() > 1 - self.epsilon:
-                    return np.random.randint(low=0, high=3)  # picks a random action
-                else:
-                    return np.random.choice(np.flatnonzero(values == values.max()))  # picks the 'best' action
-                # print(values, t.state)
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qe.update(t)
-
-elif AGENT_TYPE == "ME_Q":
-    class ME_AIC_Learner:
-        def __init__(self):
-            self.epsilon = EPSILON
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-                self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA, mask=linear())
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-                self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-                self.Ql = LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=linear())
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-                
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize' and not greedy:
-                self.Qe.update_RSS(t.action, t.reward, t.state_)
-
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                if np.random.random() > 1 - self.epsilon:
-                    values = np.zeros(4)  # picks a random action
-                else:
-                    values = self.Qe.predict(t.state)  # picks the 'best' action
-                return np.random.choice(np.flatnonzero(values == values.max()))
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qe.update(t)
-                # self.Qs.update(t)
-
-elif AGENT_TYPE == "RMAX":
-    class ME_AIC_Learner:
-        def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=identity())
-                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=global_context())
-                self.Qe = CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-                self.Qc = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-                self.Qr = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize':
-                self.Qe.update_RSS(t.action, t.reward, t.state_)
-
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qe.update(t)
-
-elif AGENT_TYPE == "LINEAR_RMAX":
-    class ME_AIC_Learner:
-        def __init__(self):
-            if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=identity())
-                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=global_context())
-                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
-                self.Qe = CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=identity())
-                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=global_context())
-                self.Qc = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=column())
-                self.Qr = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=row())
-                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
-                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA,
-                                          weights_method=WEIGHTS_METHOD)
-
-        def select_action(self, t, greedy=False):
-            if t.action != 'initialize':
-                self.Qe.update_RSS(t.action, t.reward, t.state_)
-
-            if greedy:  # use estimator with minimum RSS
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-            else:  # use the AIC combined estimators
-                values = self.Qe.predict(t.state)
-                return np.random.choice(np.flatnonzero(values == values.max()))
-
-        def update(self, transitions):
-            for t in transitions:
-                self.Qe.update(t)
-else:
-    print(AGENT_TYPE, "not found")
-
-
-agent = ME_AIC_Learner()
+agent = AGENTS[AGENT_TYPE]()
 rb = ReplayMemory(max_size=10000)
 
 trajectory = []

@@ -42,7 +42,8 @@ class Q_table(Estimator):
         c = self.mask.apply(t.state)
         c_ = self.mask.apply(t.state_)
         a = t.action
-        nV = 0 if t.terminal else max(self.table[c_])
+        nV = 0 if t.terminal else np.max(self.table[c_])
+        # if nV > 0: print(nV)
         self.visits[c][a] += 1
         self.table[c][a] = self.table[c][a] + self.alpha * \
                            (t.reward + self.gamma * nV - self.table[c][a])
@@ -125,7 +126,7 @@ class LinearEstimator:
         return self.n
 
     def count_parameters(self):
-        return 3  
+        return 4  
 
 
 class LinearNoveltyEstimator(LinearEstimator):
@@ -249,7 +250,7 @@ class CombinedAIC:
         # w_biased = sqrt(b/(n_u+b))
         # n_b/(n_u + n_b + 4*n_u*n_b*b)
         self.W = w/np.sum(w)
-        # print('AIC Weights', K, N, complexity, accuracy, self.RSS, AIC, self.W)
+        # print('AIC Weights', K, N, complexity, accuracy, self.RSS, self.AIC, self.W)
         return self.W
 
     def predict(self, s, store=True):

@@ -1,5 +1,7 @@
 import numpy as np
-import MDP
+from Agents import *
+from Environments import *
+from Utils import *
 from warnings import filterwarnings
 import matplotlib.pyplot as plt
 import tqdm
@@ -35,8 +37,8 @@ EXPLOIT = True
 EPSILON = 0.1
 
 cwd = os.getcwd()
-FOLDER = r"%s/%s/" % (cwd, EXPERIMENT)
-FILE_SIG = f"{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
+FOLDER = "%s\\Results" % (cwd)
+FILE_SIG = f"{EXPERIMENT}_{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
 print(FILE_SIG)
 
 if GRIDWORLD == "WILLEMSEN":
@@ -86,10 +88,10 @@ elif GRIDWORLD == "STAR":
     terminal_state = np.array([[7,0], [14,7], [7,14], [0,7]])
     initial_state = np.array([7,7])
     blacked_state = np.array([np.nan, np.nan])
-# _, _, _, _ = MDP.plot_gridworld(grid, terminal_state, initial_state, blacked_state)
+# _, _, _, _ = plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
-env = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
-env_greedy = MDP.Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
+env = Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
+env_greedy = Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
 
 # if GRIDWORLD == "WILLEMSEN":
 #     states = [(1, j) for j in range(env.grid_width)]
@@ -110,18 +112,18 @@ filterwarnings('ignore')
 if AGENT_TYPE == 'NOVELTOR':
     class ME_AIC_Learner:
         def __init__(self):
-            self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
+            self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Ns = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Ng = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qe = MDP.CombinedAIC([self.Ns, self.Ng], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Qe = CombinedAIC([self.Ns, self.Ng], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Ns = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Ng = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Nc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Nr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                # self.Nl = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
-                self.Qe = MDP.CombinedAIC([self.Ns, self.Ng, self.Nr, self.Nc], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Nc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+                self.Nr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+                # self.Nl = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = CombinedAIC([self.Ns, self.Ng, self.Nr, self.Nc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize' and greedy:
@@ -144,17 +146,17 @@ elif AGENT_TYPE == 'LINEAR_NOVELTOR':
     class ME_AIC_Learner:
         def __init__(self):
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=MDP.linear())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Ql = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=linear())
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=MDP.linear())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Qc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+                self.Qr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+                self.Ql = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA, mask=linear())
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize' and not greedy:
@@ -175,18 +177,18 @@ elif AGENT_TYPE == 'LINEAR_NOVELTOR':
 elif AGENT_TYPE == 'PSEUDOCOUNT':
     class ME_AIC_Learner:
         def __init__(self):
-            self.N = MDP.pseudoCountNovelty(features=[MDP.identity, MDP.row, MDP.column], alpha=1)
+            self.N = pseudoCountNovelty(features=[identity, row, column], alpha=1)
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Ql = MDP.LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Ql = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qc = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Qr = MDP.N_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Qc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+                self.Qr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize' and not greedy:
@@ -208,16 +210,16 @@ elif AGENT_TYPE == "LINEAR":
     class ME_AIC_Learner:
         def __init__(self):
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Ql = MDP.LinearEstimator(alpha=0.0001, gamma=GAMMA)
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Ql], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = CombinedAIC([self.Qs, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qc = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Qr = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Ql = MDP.LinearEstimator(alpha=0.0001, gamma=GAMMA)
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+                self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA)
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
@@ -239,11 +241,11 @@ elif AGENT_TYPE == "SIMPLE_Q":
         def __init__(self):
             self.epsilon = EPSILON
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qe = MDP.CombinedAIC([self.Qs], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qe = CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qe = MDP.CombinedAIC([self.Qs], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qe = CombinedAIC([self.Qs], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize' and not greedy:
@@ -269,19 +271,19 @@ elif AGENT_TYPE == "ME_Q":
         def __init__(self):
             self.epsilon = EPSILON
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qc = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Qr = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Ql = MDP.LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=MDP.linear())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+                self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA, mask=linear())
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qc = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Qr = MDP.Q_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Ql = MDP.LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=MDP.linear())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+                self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+                self.Ql = LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=linear())
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
                 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize' and not greedy:
@@ -307,15 +309,15 @@ elif AGENT_TYPE == "RMAX":
     class ME_AIC_Learner:
         def __init__(self):
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=MDP.identity())
-                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=MDP.global_context())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=identity())
+                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=1, mask=global_context())
+                self.Qe = CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.identity())
-                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.global_context())
-                self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.column())
-                self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, mask=MDP.row())
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+                self.Qc = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+                self.Qr = RMax_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
             if t.action != 'initialize':
@@ -336,17 +338,17 @@ elif AGENT_TYPE == "LINEAR_RMAX":
     class ME_AIC_Learner:
         def __init__(self):
             if GRIDWORLD == 'WILLEMSEN' or GRIDWORLD == "STRAIGHT":
-                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.identity())
-                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.global_context())
-                self.Ql = MDP.LinearEstimator(alpha=0.0001, gamma=GAMMA, b=0.5)
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, beta=BETA, weights_method=WEIGHTS_METHOD)
+                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=identity())
+                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=global_context())
+                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
+                self.Qe = CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             elif GRIDWORLD == 'POOL' or GRIDWORLD == "STAR":
-                self.Qs = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.identity())
-                self.Qg = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.global_context())
-                self.Qc = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.column())
-                self.Qr = MDP.RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=MDP.row())
-                self.Ql = MDP.LinearEstimator(alpha=0.0001, gamma=GAMMA, b=0.5)
-                self.Qe = MDP.CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, beta=BETA,
+                self.Qs = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=identity())
+                self.Qg = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=global_context())
+                self.Qc = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=column())
+                self.Qr = RMax_table(alpha=ALPHA, gamma=GAMMA, MAX=0.5, mask=row())
+                self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA, b=0.5)
+                self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA,
                                           weights_method=WEIGHTS_METHOD)
 
         def select_action(self, t, greedy=False):
@@ -368,7 +370,7 @@ else:
 
 
 agent = ME_AIC_Learner()
-rb = MDP.ReplayMemory(max_size=10000)
+rb = ReplayMemory(max_size=10000)
 
 trajectory = []
 trajectories = []
@@ -473,14 +475,14 @@ if PLOT:
     ax1.plot(x, yg, label='exploiting')
 
     ax1.set_ylabel('cumulative discounted reward')
-    MDP.plt.xlabel('steps')
+    plt.xlabel('steps')
 
     ax1.legend(bbox_to_anchor=(1.02, 1), loc="upper left")
 
     ax2.set_ylabel('trajectory length')
     ax2.scatter(cumEpilen, [ele[0] for ele in epilen], s=5)
     ax2.scatter(cumEpiG, [ele[1] for ele in epilen], s=5)
-    MDP.plt.tight_layout()
+    plt.tight_layout()
     plt.savefig(f'{FOLDER}\\G_{FILE_SIG}.png')
 
     # PLOT Estimator Evolution over time #
@@ -527,7 +529,7 @@ if PLOT:
     # Value Function Plot
 
     visits = agent.Qs.visits
-    hm = MDP.generate_heatmap(grid=env.grid, table=visits, aggf=lambda s: np.sum(s))
+    hm = generate_heatmap(grid=env.grid, table=visits, aggf=lambda s: np.sum(s))
     plt.figure(6)
     plt.title(r"Updates Heatmap $\approx$ Visits")
     plt.imshow(hm, origin='lower')

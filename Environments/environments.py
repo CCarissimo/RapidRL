@@ -39,7 +39,7 @@ class Transition:
 
 
 class Gridworld(Env, ABC):
-    def __init__(self, grid, terminal_states, initial_state, blacked_states, max_steps):
+    def __init__(self, grid, terminal_states, initial_state, blacked_states):
         super().__init__()
         self.actions = ['up', 'down', 'left', 'right']
         self.actions_dict = {'up': (-1, 0), 'down': (1, 0), 'left': (0, -1),
@@ -50,9 +50,7 @@ class Gridworld(Env, ABC):
         self.initial_state = tuple(initial_state)
         self.blacked_states = blacked_states
         self.step_counter = 0
-        self.max_steps = max_steps
         self.terminal = False
-        self.timeout = False
         self.transition = Transition(state=self.initial_state,
                                      action='initialize',
                                      state_=self.initial_state,
@@ -83,9 +81,6 @@ class Gridworld(Env, ABC):
         for s in self.terminal_states:
             if (state_ == s).all():
                 self.terminal = True
-
-        if self.step_counter == self.max_steps:
-            self.timeout = True
 
         self.transition = Transition(state=self.transition.state_, action=action, state_=state_, reward=reward,
                                      terminal=self.terminal, targets=None)

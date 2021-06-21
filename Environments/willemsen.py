@@ -15,5 +15,7 @@ terminal_state = np.array(terminal_state)
 initial_state = np.array([1, 0])
 blacked_state = np.array([[0, 8], [2, 8]])
 
-states = [(i, j) for i in [0, 1, 2] for j in range(env.grid_width)]
-env_shape = (3, env.grid_width)
+# willemsenGW = Gridworld(grid, terminal_state, initial_state, blacked_state)
+
+# states = [(i, j) for i in [0, 1, 2] for j in range(env.grid_width)]
+# env_shape = (3, env.grid_width)

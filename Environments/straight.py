@@ -14,3 +14,5 @@ terminal_state.append([1, 8])
 terminal_state = np.array(terminal_state)
 initial_state = np.array([1, 0])
 blacked_state = np.array([[0, 8], [2, 8]])
+
+# straightGW = Gridworld(grid, terminal_state, initial_state, blacked_state)

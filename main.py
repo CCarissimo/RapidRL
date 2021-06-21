@@ -15,10 +15,11 @@ parser.add_argument("gridworld", help="specify the name of the environment",
                     type=str)
 parser.add_argument("agent_type", help="specify the agent type",
                     type=str)
-parser.add_argument("--exploit", help="if included agent will alternate between exploration and exploitation to evaluate the learned information", action="store_false")
+parser.add_argument("--noexploit", help="if included agent will alternate between exploration and exploitation to evaluate the learned information", action="store_false")
 parser.add_argument("--plot", help="include if you would like plots", action="store_true")
 parser.add_argument("--animate", help="include if you would like an animation of the value function"
     , action="store_true")
+parser.add_argument("--plotGW", help="include if you would like a plot of the Gridworld before training and evaluation is run", action="store_true")
 parser.add_argument("-n", "--max_steps", help="integer: the maximum number of steps, default at 100", type=int, default=100)
 parser.add_argument("--timeout", help="integer: the maximum number of steps for a single trajectory, default at 34", type=int, default=34)
 parser.add_argument("-a", "--alpha", help="float: the alpha value used for updates, default at 0.1", type=float, default=0.1)
@@ -44,13 +45,20 @@ RSS_ALPHA = args.rss_alpha
 LIN_ALPHA = args.lin_alpha
 BATCH_SIZE = args.batch_size
 WEIGHTS_METHOD = args.weights_method
-EXPLOIT = args.exploit
+EXPLOIT = args.noexploit
 EPSILON = args.epsilon
 
 cwd = os.getcwd()
 FOLDER = "%s\\Results" % (cwd)
 FILE_SIG = f"{EXPERIMENT}_{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
 print(FILE_SIG)
+
+# ENVS = {
+#     "WILLEMSEN": willemsen,
+#     "STRAIGHT": straight, 
+#     "POOL": pool,
+#     "START": star,
+# }
 
 if GRIDWORLD == "WILLEMSEN":
     grid = np.ones((3, 9)) * -1
@@ -99,14 +107,13 @@ elif GRIDWORLD == "STAR":
     terminal_state = np.array([[7,0], [14,7], [7,14], [0,7]])
     initial_state = np.array([7,7])
     blacked_state = np.array([np.nan, np.nan])
-# _, _, _, _ = plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
-env = Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
-env_greedy = Gridworld(grid, terminal_state, initial_state, blacked_state, EPISODE_TIMEOUT)
+if args.plotGW:
+    _, _, _, _ = plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
-# if GRIDWORLD == "WILLEMSEN":
-#     states = [(1, j) for j in range(env.grid_width)]
-#     env_shape = (1, env.grid_width)
+env = Gridworld(grid, terminal_state, initial_state, blacked_state)
+env_greedy = Gridworld(grid, terminal_state, initial_state, blacked_state)
+
 if GRIDWORLD == "STRAIGHT" or GRIDWORLD=="WILLEMSEN":
     states = [(i, j) for i in [0, 1, 2] for j in range(env.grid_width)]
     env_shape = (3, env.grid_width)
@@ -115,8 +122,6 @@ elif GRIDWORLD == "POOL" or GRIDWORLD == "STAR":
     env_shape = (env.grid_height, env.grid_width)
 else:
     print("WORLD not found")
-
-print(states)
 
 filterwarnings('ignore')
 
@@ -153,7 +158,7 @@ for i in tqdm.tqdm(range(MAX_STEPS)):
     if EXPLOIT:
         # RUN entire trajectory, and set greedy env to the initial state
         env_greedy.reset()
-        while not env_greedy.terminal and not env_greedy.timeout:
+        while not env_greedy.terminal and len(Gg) <= MAX_STEPS:
             action = agent.select_action(env_greedy.transition, greedy=True)
             transition = env_greedy.step(action)
             Gg.append(transition.reward)
@@ -194,7 +199,7 @@ for i in tqdm.tqdm(range(MAX_STEPS)):
         'steps': step
     })
 
-    if env.terminal or env.timeout:
+    if env.terminal or len(trajectory) >= MAX_STEPS:
         trajectories.append(trajectory)
         epilen.append([len(Gn), len(Gg)])
 

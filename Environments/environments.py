@@ -63,7 +63,7 @@ class Gridworld(Env, ABC):
     def act_from_state(self, state, action):
         return tuple(map(lambda x, y: x + y, state, self.actions_dict[self.actions[action]]))
 
-    def step(self, action):
+    def step(self, action):  # my runs spend most of their time in this function... it is very slow. 
         state_ = self.act_from_state(self.transition.state_, action)
 
         if state_[0] < 0 or state_[0] > self.grid_height-1:

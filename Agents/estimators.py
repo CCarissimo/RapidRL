@@ -110,8 +110,8 @@ class LinearEstimator:
 
     def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
         """takes the x and y positions on the grid to evaluate the value of a particular state"""
-        return self.W[0] * x + self.W[1] * y + self.W[2]
-
+        # return self.W[0] * x + self.W[1] * y + self.W[2]
+        return 
     def evaluate(self, s):  # returns an array of size len(actions)
         y, x = self.mask.apply(s)
         V = np.array([
@@ -240,7 +240,7 @@ class CombinedAIC:
             aic = np.min(self.AIC)
             w = np.exp(np.subtract(aic, self.AIC)/self.beta)
         elif self.weights_method == "exp_size_corrected":
-            self.AIC = np.add(complexity, accuracy) + (2*np.power(K, 2) + 2*K)/(np.subtract(N, K) - 1)
+            self.AIC = np.add(np.add(complexity, accuracy), np.add(2*np.power(K, 2), 2*K)/np.subtract(np.subtract(N, K), 1))
             aic = np.min(self.AIC)
             w = np.exp(np.subtract(aic, self.AIC)/self.beta)
         elif self.weights_method == "weighted_average":

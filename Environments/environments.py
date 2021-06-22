@@ -47,7 +47,7 @@ class Gridworld(Env, ABC):
         self.actions_map = {action: i for i, action in enumerate(self.actions)}
         self.grid = grid
         self.terminal_states = terminal_states
-        self.initial_state = tuple(initial_state)
+        self.initial_state = initial_state
         self.blacked_states = blacked_states
         self.step_counter = 0
         self.terminal = False
@@ -71,16 +71,13 @@ class Gridworld(Env, ABC):
         elif state_[1] < 0 or state_[1] > self.grid_width-1:
             state_ = self.transition.state_
         else:
-            for s in self.blacked_states:
-                if (state_ == s).all():
-                    state_ = self.transition.state_
-                    continue
+            if state_ in self.blacked_states:
+                state_ = self.transition.state_
 
         reward = self.grid[state_] if state_ != self.transition.state_ else 0  # reward 0 if action leads to same state
 
-        for s in self.terminal_states:
-            if (state_ == s).all():
-                self.terminal = True
+        if state_ in self.terminal_states:
+            self.terminal = True
 
         self.transition = Transition(state=self.transition.state_, action=action, state_=state_, reward=reward,
                                      terminal=self.terminal, targets=None)

@@ -19,12 +19,12 @@ import pickle as cPickle
 # In[2]:
 
 
-EXPERIMENT = 'epochs'
+EXPERIMENT = 'test_slow_epochs'
 GRIDWORLD = 'WILLEMSEN'
 AGENT_TYPE = 'ME_Q'
 PLOT = True
 ANIMATE = False
-MAX_STEPS = 10
+MAX_STEPS = 10000
 EPISODE_TIMEOUT = 33
 GAMMA = 0.9
 ALPHA = 0.1
@@ -34,7 +34,7 @@ BATCH_SIZE = 10
 WEIGHTS_METHOD = 'exp_size_corrected'
 EXPLOIT = True
 EPSILON = 0.1
-EPOCHS = 1000  # 0.159 for 100 EPOCHS should be 1.59 for 1000 EPOCHS. 
+EPOCHS = 100  # 0.159 for 100 EPOCHS should be 1.59 for 1000 EPOCHS. 
 dim2D = False if GRIDWORLD == "WILLEMSEN" else True
 cwd = os.getcwd()
 FOLDER = "%s\\Results" % (cwd)
@@ -53,13 +53,14 @@ if GRIDWORLD == "WILLEMSEN":
     terminal_state = []
     for i in [0, 2]:
         for j in range(8):
-            terminal_state.append([i, j])
-    terminal_state.append([1, 8])
-    # terminal_state.append([0, 8])
-    # terminal_state.append([2, 8])
-    terminal_state = np.array(terminal_state)
-    initial_state = np.array([1, 0])
-    blacked_state = np.array([[0, 8], [2, 8]])
+            terminal_state.append((i, j))
+    terminal_state.append((1, 8))
+    terminal_reward = set(terminal_state)
+    initial_state = (1, 0)
+    blacked_state = {(0, 8), (2, 8)}
+    # terminal_state = np.array(terminal_state)
+    # initial_state = np.array([1, 0])
+    # blacked_state = np.array([[0, 8], [2, 8]])
 elif GRIDWORLD == "STRAIGHT":
     grid = np.ones((3, 9)) * -1
     grid[1, :8] = 0
@@ -121,107 +122,110 @@ AGENTS = {
 
 
 # MAIN TRAINING and EVALUATION LOOP
-M = []
+os.mkdir('temp_epochs')
 for n in tqdm(range(EPOCHS)):
     agent = AGENTS[AGENT_TYPE](dim2D=dim2D)
     rb = ReplayMemory(max_size=10000)
     env.reset()
     env_greedy.reset()
     metrics, trajectories = train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
-    M.append(metrics)
-
-# In[ ]:
-
-
-with open('%s.txt'%FILE_SIG, 'wb') as fh:
-    cPickle.dump(M, fh)
-
-# In[ ]:
+    # M.append(metrics)
+    with open('%i_%s.txt'%(n, FILE_SIG), 'wb') as fh:
+        cPickle.dump(metrics, fh)
 
 
-# percentile based on
-# http://www.jtrive.com/the-empirical-bootstrap-for-confidence-intervals-in-python.html
-
-# adapted according to empirical on
-# https://github.com/LizaLebedeva/bootstrap-experiments/blob/master/bootstrap_methods.ipynb
-
-def bootstrap_empirical(data, n=1000, func=np.mean):
-    """
-    Generate `n` bootstrap samples, evaluating `func`
-    at each resampling. `bootstrap` returns a function,
-    which can be called to obtain confidence intervals
-    of interest.
-    """
-    simulations = list()
-    sample_size = len(data)
-    for c in range(n):
-        itersample = np.random.choice(data, size=sample_size, replace=True)
-        simulations.append(func(itersample))
-    simulations.sort()
-    obs_metric = func(data) # compute CI center from data directly
-#     simulations = simulations - obs_metric # now move bootstrap to differences
-    def ci(p):
-        """
-        Return 2-sided symmetric confidence interval specified
-        by p.
-        """
-        u_pval = (1+p)/2.
-        l_pval = (1-u_pval)
-        l_indx = int(np.floor(n*l_pval))
-        u_indx = int(np.floor(n*u_pval))
-        percentile_upper = simulations[l_indx]
-        percentile_lower = simulations[u_indx]
-        empirical_lower = 2*obs_metric - percentile_lower
-        empirical_upper = 2*obs_metric - percentile_upper
-        return(empirical_lower,empirical_upper)
-    return(ci)
+# # In[ ]:
 
 
-# In[ ]:
+# with open('%s.txt'%FILE_SIG, 'wb') as fh:
+#     cPickle.dump(M, fh)
+
+# # In[ ]:
 
 
-R = np.zeros((EPOCHS, MAX_STEPS, 2))
+# # percentile based on
+# # http://www.jtrive.com/the-empirical-bootstrap-for-confidence-intervals-in-python.html
 
-for i, epoch in enumerate(M):
-    for j, metrics in enumerate(epoch):
-        for exp, g in enumerate(metrics['Gn']):
-            R[i,j, 0] += GAMMA**exp*g
-        for exp, g in enumerate(metrics['Gg']):
-            R[i,j, 1] += GAMMA**exp*g
+# # adapted according to empirical on
+# # https://github.com/LizaLebedeva/bootstrap-experiments/blob/master/bootstrap_methods.ipynb
+
+# def bootstrap_empirical(data, n=1000, func=np.mean):
+#     """
+#     Generate `n` bootstrap samples, evaluating `func`
+#     at each resampling. `bootstrap` returns a function,
+#     which can be called to obtain confidence intervals
+#     of interest.
+#     """
+#     simulations = list()
+#     sample_size = len(data)
+#     for c in range(n):
+#         itersample = np.random.choice(data, size=sample_size, replace=True)
+#         simulations.append(func(itersample))
+#     simulations.sort()
+#     obs_metric = func(data) # compute CI center from data directly
+# #     simulations = simulations - obs_metric # now move bootstrap to differences
+#     def ci(p):
+#         """
+#         Return 2-sided symmetric confidence interval specified
+#         by p.
+#         """
+#         u_pval = (1+p)/2.
+#         l_pval = (1-u_pval)
+#         l_indx = int(np.floor(n*l_pval))
+#         u_indx = int(np.floor(n*u_pval))
+#         percentile_upper = simulations[l_indx]
+#         percentile_lower = simulations[u_indx]
+#         empirical_lower = 2*obs_metric - percentile_lower
+#         empirical_upper = 2*obs_metric - percentile_upper
+#         return(empirical_lower,empirical_upper)
+#     return(ci)
 
 
-# In[ ]:
+# # In[ ]:
 
 
-Rn = R[:,:,0]
-Rg = R[:,:,1]
-yn = np.mean(Rn, axis=0)
-yg = np.mean(Rg, axis=0)
-yCIn = list(map(lambda p: bootstrap_empirical(p)(0.95), Rn.T))
-yCIg = list(map(lambda p: bootstrap_empirical(p)(0.95), Rg.T))
-Yn = np.transpose(yCIn)
-Yg = np.transpose(yCIg)
+# R = np.zeros((EPOCHS, MAX_STEPS, 2))
+
+# for i, epoch in enumerate(M):
+#     for j, metrics in enumerate(epoch):
+#         for exp, g in enumerate(metrics['Gn']):
+#             R[i,j, 0] += GAMMA**exp*g
+#         for exp, g in enumerate(metrics['Gg']):
+#             R[i,j, 1] += GAMMA**exp*g
 
 
-# In[ ]:
+# # In[ ]:
 
 
-# get_ipython().run_line_magic('matplotlib', 'inline')
-x = np.arange(0, MAX_STEPS, 1)
+# Rn = R[:,:,0]
+# Rg = R[:,:,1]
+# yn = np.mean(Rn, axis=0)
+# yg = np.mean(Rg, axis=0)
+# yCIn = list(map(lambda p: bootstrap_empirical(p)(0.95), Rn.T))
+# yCIg = list(map(lambda p: bootstrap_empirical(p)(0.95), Rg.T))
+# Yn = np.transpose(yCIn)
+# Yg = np.transpose(yCIg)
 
-fig, ax = plt.subplots(figsize=(8,5))
-plt.plot(x, yn, label='exploring')
-ax.fill_between(x, Yn[0], Yn[1], color='teal', alpha=.2)
 
-plt.plot(x, yg, label='exploiting')
-ax.fill_between(x, Yg[0], Yg[1], color='purple', alpha=.2)
+# # In[ ]:
 
-plt.ylabel('cumulative discounted reward')
-plt.xlabel('episode')
 
-plt.legend()
-plt.savefig(f'results/{FILE_SIG}_exploit.png')
-plt.show()
+# # get_ipython().run_line_magic('matplotlib', 'inline')
+# x = np.arange(0, MAX_STEPS, 1)
+
+# fig, ax = plt.subplots(figsize=(8,5))
+# plt.plot(x, yn, label='exploring')
+# ax.fill_between(x, Yn[0], Yn[1], color='teal', alpha=.2)
+
+# plt.plot(x, yg, label='exploiting')
+# ax.fill_between(x, Yg[0], Yg[1], color='purple', alpha=.2)
+
+# plt.ylabel('cumulative discounted reward')
+# plt.xlabel('episode')
+
+# plt.legend()
+# plt.savefig(f'results/{FILE_SIG}_exploit.png')
+# plt.show()
 
 
 

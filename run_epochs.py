@@ -32,7 +32,7 @@ RSS_ALPHA = 0.1
 LIN_ALPHA = 0.0001
 BATCH_SIZE = 10
 WEIGHTS_METHOD = 'exp_size_corrected'
-EXPLOIT = True
+EXPLOIT = False
 EPSILON = 0.1
 EPOCHS = 100  # 0.159 for 100 EPOCHS should be 1.59 for 1000 EPOCHS. 
 dim2D = False if GRIDWORLD == "WILLEMSEN" else True
@@ -122,15 +122,15 @@ AGENTS = {
 
 
 # MAIN TRAINING and EVALUATION LOOP
-os.mkdir('temp_epochs')
+# os.mkdir('temp_epochs')
 for n in tqdm(range(EPOCHS)):
     agent = AGENTS[AGENT_TYPE](dim2D=dim2D)
     rb = ReplayMemory(max_size=10000)
     env.reset()
     env_greedy.reset()
-    metrics, trajectories = train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
+    metrics = train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
     # M.append(metrics)
-    with open('%i_%s.txt'%(n, FILE_SIG), 'wb') as fh:
+    with open(f'{FOLDER}\\temp_epochs\\{n}_{FILE_SIG}.txt', 'wb') as fh:
         cPickle.dump(metrics, fh)
 
 

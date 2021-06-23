@@ -68,11 +68,11 @@ def train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, en
 	    })
 
 	    if env.terminal or len(trajectory) >= MAX_STEPS:
-	        trajectories.append(trajectory)
+	        # trajectories.append(trajectory)
 	        epilen.append([len(Gn), len(Gg)])
 
 	        env.reset()
 	        trajectory = []
 	        Gn = []
 
-	return metrics, trajectories
+	return metrics#, trajectories

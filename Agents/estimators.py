@@ -207,7 +207,7 @@ class CombinedActionEstimator:
 class CombinedAIC:
     def __init__(self, estimators, RSS_alpha, beta=2, weights_method='exponential'):
         self.estimators = estimators
-        self.prev_V = np.zeros(len(self.estimators))
+        self.prev_V = np.zeros((4, len(self.estimators)))  # 4 actions, a value for each action
         self.prev_W = np.zeros(len(self.estimators))
         self.RSS = np.ones(len(self.estimators))*1e-6
         self.alpha = RSS_alpha
@@ -215,6 +215,7 @@ class CombinedAIC:
         self.weights_method = weights_method
         self.gamma = self.estimators[0].gamma
         self.beta = beta
+        self.AIC = np.full([len(self.estimators)], np.nan)
 
     # def weights(self, s):
     #     """Computes the weights for the estimators based on the Akaike Information Criterion"""
@@ -265,6 +266,7 @@ class CombinedAIC:
         V = np.array([e.evaluate(s_) for e in self.estimators]).T
         # print("V", V.T, self.prev_V.T)
         Qsa = self.prev_V[a]  # check that this is a vector
+        # print(self.prev_V)
         maxQs_a_ = np.max(np.dot(V, self.prev_W))  # check that this is a vector
         e = r + self.gamma * maxQs_a_ - Qsa
         e2 = np.power(e, 2)

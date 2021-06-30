@@ -138,10 +138,8 @@ class MEQ:
         else:
             self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
             self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-            self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-            self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
             self.Ql = LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=linear())
-            self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+            self.Qe = CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
             
     def select_action(self, t, greedy=False):
         if t.action != 'initialize' and not greedy:

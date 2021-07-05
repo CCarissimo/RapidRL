@@ -19,7 +19,7 @@ import pickle as cPickle
 # In[2]:
 
 
-EXPERIMENT = 'test_slow_epochs'
+EXPERIMENT = 'A'
 GRIDWORLD = 'WILLEMSEN'
 AGENT_TYPE = 'ME_Q'
 PLOT = True
@@ -32,7 +32,7 @@ RSS_ALPHA = 0.1
 LIN_ALPHA = 0.0001
 BATCH_SIZE = 10
 WEIGHTS_METHOD = 'exp_size_corrected'
-EXPLOIT = False
+EXPLOIT = True
 EPSILON = 0.1
 EPOCHS = 100  # 0.159 for 100 EPOCHS should be 1.59 for 1000 EPOCHS. 
 dim2D = False if GRIDWORLD == "WILLEMSEN" else True
@@ -128,7 +128,7 @@ for n in tqdm(range(EPOCHS)):
     rb = ReplayMemory(max_size=10000)
     env.reset()
     env_greedy.reset()
-    metrics = train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
+    metrics = eval_every_trajectory(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
     # M.append(metrics)
     with open(f'{FOLDER}\\temp_epochs\\{n}_{FILE_SIG}.txt', 'wb') as fh:
         cPickle.dump(metrics, fh)

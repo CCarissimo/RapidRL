@@ -65,36 +65,43 @@ class LinearNoveltor:
         for t in transitions:
             self.Qe.update(t)
 
-class Pseudocount:
-    def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
-        self.N = pseudoCountNovelty(features=[identity, row, column], alpha=1)
+class Pseudocount:  
+    def __init__(self, dim2D=False, EPSILON=0.1, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
+        self.N = pseudoCountNovelty(features=[identity(), row(), column()], alpha=0.1)
+        self.epsilon = EPSILON
         if dim2D:
-            self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-            self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-            self.Ql = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
-            self.Qe = CombinedAIC([self.Qs, self.Qg, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+            self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+            self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+            self.Qc = Q_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+            self.Qr = Q_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+            self.Ql = LinearEstimator(alpha=ALPHA, gamma=GAMMA, mask=linear())
+            self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc, self.Ql], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
         else:
-            self.Qs = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
-            self.Qg = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
-            self.Qc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
-            self.Qr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
-            self.Qe = CombinedAIC([self.Qs, self.Qg, self.Qr, self.Qc], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+            self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+            self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+            # self.Ql = LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=linear())
+            self.Qe = CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, beta=2, weights_method=WEIGHTS_METHOD)
 
     def select_action(self, t, greedy=False):
         if t.action != 'initialize' and not greedy:
-            novelty = self.N.evaluate(t.state) if t.state_ != t.state else 0
-            self.Qe.update_RSS(t.action, novelty, t.state_)
+            self.novelty = self.N.evaluate(t.state) if t.state_ != t.state else 0
+            self.Qe.update_RSS(t.action, t.reward+self.novelty, t.state_)
         if greedy:  # use estimator with minimum RSS
             values = self.Qe.predict(t.state)
-            # print(t, values)
             return np.random.choice(np.flatnonzero(values == values.max()))
         else:  # use the AIC combined estimators
-            values = self.Qe.predict(t.state)
+            if np.random.random() > 1 - self.epsilon:
+                values = np.zeros(4)  # picks a random action
+            else:
+                values = self.Qe.predict(t.state)  # picks the 'best' action
             return np.random.choice(np.flatnonzero(values == values.max()))
 
     def update(self, transitions):
         for t in transitions:
+            novelty = self.N.evaluate(t.state_) if t.state_ != t.state else 0
+            t.reward += novelty
             self.Qe.update(t)
+            t.reward -= novelty
 
 class SimpleQ:
     def __init__(self, dim2D=False, EPSILON=0.1, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
@@ -140,7 +147,7 @@ class MEQ:
             self.Qg = Q_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
             # self.Ql = LinearEstimator(alpha=0.0001, gamma=GAMMA, mask=linear())
             self.Qe = CombinedAIC([self.Qs, self.Qg], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
-            
+
     def select_action(self, t, greedy=False):
         if t.action != 'initialize' and not greedy:
             self.Qe.update_RSS(t.action, t.reward, t.state_)

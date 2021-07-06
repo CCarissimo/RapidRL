@@ -21,7 +21,7 @@ import pickle as cPickle
 
 EXPERIMENT = 'A'
 GRIDWORLD = 'WILLEMSEN'
-AGENT_TYPE = 'ME_Q'
+AGENT_TYPE = 'PSEUDOCOUNT'
 PLOT = True
 ANIMATE = False
 MAX_STEPS = 10000
@@ -115,6 +115,7 @@ AGENTS = {
     "ME_Q": MEQ,
     "NOVELTOR": Noveltor,
     "RMAX": RMAXQ,
+    "PSEUDOCOUNT": Pseudocount,
     }
 
 

@@ -153,23 +153,24 @@ class LinearNoveltyEstimator(LinearEstimator):
 class pseudoCountNovelty:
     def __init__(self, features: list, alpha: float):
         self.features = features
-        self.table = defaultdict(lambda: float(0))
+        self.tables = [defaultdict(lambda: float(0)) for mask in self.features]
         self.alpha = alpha
         self.t = 1
 
     def update(self, s):
-        for mask in self.features:
+        for i, mask in enumerate(self.features):
             c = mask.apply(s)
-            self.table[c] += 1
+            self.tables[i][c] += 1
         self.t += 1
 
     def evaluate(self, s):
         """evaluation function for pseudo-counts by estimating feature occurrences"""
         C = [mask.apply(s) for mask in self.features]
-        rho = np.array([self.table[c] for c in C])/self.t  # features before observation
+        rho = np.array([self.tables[i][c] for i, c in enumerate(C)])/self.t  # features before observation
         self.update(s)
-        rho_ = np.array([self.table[c] for c in C])/self.t  # features after observation
-        pseudoCount = rho * (1 - rho_) / (rho_ - rho)
+        rho_ = np.array([self.tables[i][c] for i, c in enumerate(C)])/self.t  # features after observation
+        pseudoCount = rho.prod() * (1 - rho_.prod()) / (rho_.prod() - rho.prod())
+        if pseudoCount == 0: pseudoCount += 0.0001
         return self.alpha/np.sqrt(pseudoCount)
 
 

@@ -132,6 +132,7 @@ AGENTS = {
     "ME_Q": MEQ,
     "NOVELTOR": Noveltor,
     "RMAX": RMAXQ,
+    "PSEUDOCOUNT": Pseudocount
     }
 
 agent = AGENTS[AGENT_TYPE]()
@@ -145,7 +146,7 @@ Gn = []
 step = 0
 
 # MAIN TRAINING and EVALUATION LOOP
-metrics, trajectories = train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
+metrics = train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
 
 # for s in states:
 #     print(step, s, agent.Qe.prev_W, agent.Qe.predict(s, store=False))
@@ -255,7 +256,7 @@ def overlay_actions(A):
     k = 0
     for i in range(env.grid_width):
         for j in range(env.grid_height):
-            if np.array([((j, i) == s).all() for s in env.terminal_states]).any():  # check my terminal states 
+            if (j, i) in env.terminal_states:  # check my terminal states 
                 terminal_reward = env.grid[j, i]
                 if len(ann_list) > k:
                     ann_list[k].set_text(f"{terminal_reward:.1f}".lstrip('0'))

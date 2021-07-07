@@ -2,7 +2,7 @@
 from tqdm.auto import tqdm
 import numpy as np
 
-def train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT=True):
+def train_and_eval(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_greedy, states, env_shape, EXPLOIT=True):
 	trajectory = []
 	trajectories = []
 	metrics = []
@@ -14,6 +14,7 @@ def train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, en
 	for i in range(MAX_STEPS):
 	    # EXPLORE
 	    action = agent.select_action(env.transition)
+	    print('explore', action)
 	    transition = env.step(action)
 	    rb.append(transition)
 	    Gn.append(transition.reward)
@@ -26,8 +27,9 @@ def train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, en
 	    if EXPLOIT:
 	        # RUN entire trajectory, and set greedy env to the initial state
 	        env_greedy.reset()
-	        while not env_greedy.terminal and len(Gg) <= MAX_STEPS:
+	        while not env_greedy.terminal and len(Gg) <= EPISODE_TIMEOUT:
 	            action = agent.select_action(env_greedy.transition, greedy=True)
+	            print('exploit', action)
 	            transition = env_greedy.step(action)
 	            Gg.append(transition.reward)
 
@@ -67,7 +69,7 @@ def train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, en
 	        'steps': step
 	    })
 
-	    if env.terminal or len(trajectory) >= MAX_STEPS:
+	    if env.terminal or len(trajectory) >= EPISODE_TIMEOUT:
 	        # trajectories.append(trajectory)
 	        epilen.append([len(Gn), len(Gg)])
 

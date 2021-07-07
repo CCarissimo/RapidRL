@@ -146,7 +146,7 @@ Gn = []
 step = 0
 
 # MAIN TRAINING and EVALUATION LOOP
-metrics = train_and_eval(MAX_STEPS, BATCH_SIZE, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
+metrics = train_and_eval(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
 
 # for s in states:
 #     print(step, s, agent.Qe.prev_W, agent.Qe.predict(s, store=False))

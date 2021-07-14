@@ -14,7 +14,7 @@ def train_and_eval(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_g
 	for i in range(MAX_STEPS):
 	    # EXPLORE
 	    action = agent.select_action(env.transition)
-	    print('explore', action)
+	    # print('explore', action)
 	    transition = env.step(action)
 	    rb.append(transition)
 	    Gn.append(transition.reward)
@@ -29,7 +29,7 @@ def train_and_eval(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_g
 	        env_greedy.reset()
 	        while not env_greedy.terminal and len(Gg) <= EPISODE_TIMEOUT:
 	            action = agent.select_action(env_greedy.transition, greedy=True)
-	            print('exploit', action)
+	            # print('exploit', action)
 	            transition = env_greedy.step(action)
 	            Gg.append(transition.reward)
 

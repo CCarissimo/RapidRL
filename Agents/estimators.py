@@ -81,18 +81,20 @@ class LinearEstimator:
         self.gamma = gamma
         self.mask = mask
         self.n = 0
-        self.mx = 0
-        self.my = 0
-        self.b = b
+        self.mx = np.zeros(len(self.actions))
+        self.my = np.zeros(len(self.actions))
+        self.b = np.ones(len(self.actions)) * b
         self.W = np.array([self.mx, self.my, self.b]).T
 
     def update(self, t):
         """function to update the parameters of our linear estimator"""
         y, x = self.mask.apply(t.state)
-        y_hat = self.polynomial(x, y)
-        y = t.reward + self.gamma * (np.max(np.abs(self.W[:-1])) + self.b)
+        a = t.action
+        y_hat = self.polynomial(x, y)[a]
         X = np.array([x, y, 1]).T
-        self.W = self.W - 2 * self.alpha * X * (y_hat - y) 
+        y = t.reward + self.gamma * (np.abs(self.W[a, :-1]).max() + self.b[a])
+        # print(self.W[a], X, y_hat, y)
+        self.W[a] = self.W[a] - 2 * self.alpha * X * (y_hat - y)
         self.n += 1
 
     # def update(self, t):
@@ -110,17 +112,12 @@ class LinearEstimator:
 
     def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
         """takes the x and y positions on the grid to evaluate the value of a particular state"""
-        # return self.W[0] * x + self.W[1] * y + self.W[2]
-        return 
+        return np.dot(np.array([x, y, 1]), self.W.T)
+
     def evaluate(self, s):  # returns an array of size len(actions)
         y, x = self.mask.apply(s)
-        V = np.array([
-            self.polynomial(x, y - 1),  # up
-            self.polynomial(x, y + 1),  # down
-            self.polynomial(x - 1, y),  # left
-            self.polynomial(x + 1, y)   # right
-        ])
-        return V
+        # print(self.polynomial(x, y))
+        return self.polynomial(x, y)
 
     def get_visits(self, s):
         return self.n
@@ -242,7 +239,7 @@ class CombinedAIC:
             aic = np.min(self.AIC)
             w = np.exp(np.subtract(aic, self.AIC)/self.beta)
         elif self.weights_method == "exp_size_corrected":
-            self.AIC = np.add(np.add(complexity, accuracy), np.add(2*np.power(K, 2), 2*K)/np.subtract(np.subtract(N, K), 1))
+            self.AIC = np.add(np.add(complexity, accuracy), np.add(2*np.power(K, 2), 2*K)/np.subtract(np.subtract(N, K), 1))/np.where(N!=0, N, 1)
             aic = np.min(self.AIC)
             w = np.exp(np.subtract(aic, self.AIC)/self.beta)
         elif self.weights_method == "weighted_average":

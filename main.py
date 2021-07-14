@@ -96,9 +96,9 @@ elif GRIDWORLD == "POOL":
     grid = np.ones((8, 8)) * 0
     grid[3:6, 3:6] = -1
     grid[7, 7] = 1
-    terminal_state = np.array([7, 7])
-    initial_state = np.array([1, 0])
-    blacked_state = np.array([[5, 5], [4, 5], [5, 4], [4, 4]])
+    terminal_state = {(7, 7)}
+    initial_state = (1, 0)
+    blacked_state = {(5, 5), (4, 5), (5, 4), (4, 4)}
     # blacked_state = np.array([[np.nan, np.nan], [np.nan, np.nan]])
 elif GRIDWORLD == "STAR":
     grid = np.ones((15, 15)) * 0.1
@@ -106,9 +106,9 @@ elif GRIDWORLD == "STAR":
     grid[14, 7] = -1
     grid[7, 14] = 1
     grid[0, 7] = 1
-    terminal_state = np.array([[7,0], [14,7], [7,14], [0,7]])
-    initial_state = np.array([7,7])
-    blacked_state = np.array([np.nan, np.nan])
+    terminal_state = {(7,0), (14,7), (7,14), (0,7)}
+    initial_state = (7,7)
+    blacked_state = {(np.nan, np.nan)}
 
 if args.plotGW:
     _, _, _, _ = plot_gridworld(grid, terminal_state, initial_state, blacked_state)
@@ -310,7 +310,7 @@ if ANIMATE:
         # for j, b in enumerate(bars):
         #     b.set_height(metrics[i]['W'][j])
 
-    ani = animation.FuncAnimation(fig, animate, interval=40, frames=len(metrics))
+    ani = animation.FuncAnimation(fig, animate, interval=int(30/len(metrics)), frames=len(metrics))
     plt.show()
 
 # Visualise Q-learning

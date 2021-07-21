@@ -85,13 +85,13 @@ elif GRIDWORLD == "STRAIGHT":
     terminal_state = []
     for i in [0]:
         for j in range(8):
-            terminal_state.append([i, j])
-    terminal_state.append([1, 8])
+            terminal_state.append((i, j))
+    terminal_state.append((1, 8))
     # terminal_state.append([0, 8])
     # terminal_state.append([2, 8])
-    terminal_state = np.array(terminal_state)
-    initial_state = np.array([1, 0])
-    blacked_state = np.array([[0, 8], [2, 8]])
+    terminal_state = set(terminal_state)
+    initial_state = (1, 0)
+    blacked_state = {(0, 8), (2, 8)}
 elif GRIDWORLD == "POOL":
     grid = np.ones((8, 8)) * 0
     grid[3:6, 3:6] = -1
@@ -310,7 +310,7 @@ if ANIMATE:
         # for j, b in enumerate(bars):
         #     b.set_height(metrics[i]['W'][j])
 
-    ani = animation.FuncAnimation(fig, animate, interval=int(30/len(metrics)), frames=len(metrics))
+    ani = animation.FuncAnimation(fig, animate, interval=int(30000/len(metrics)), frames=len(metrics))
     plt.show()
 
 # Visualise Q-learning

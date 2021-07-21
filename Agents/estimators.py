@@ -79,7 +79,7 @@ class LinearEstimator:
             self.actions = {'up': 0, 'down': 1, 'left': 2, 'right': 3}
         self.alpha = alpha
         self.gamma = gamma
-        self.mask = mask
+        self.mask = mask  # expects the linear mask, which acts as identity, only for naming ... 
         self.n = 0
         self.mx = np.zeros(len(self.actions))
         self.my = np.zeros(len(self.actions))
@@ -97,19 +97,6 @@ class LinearEstimator:
         self.W[a] = self.W[a] - 2 * self.alpha * X * (y_hat - y)
         self.n += 1
 
-    # def update(self, t):
-    #     """function to update the parameters of our linear estimator"""
-    #     y, x = t.state
-    #     if t.action in [0, 1]:  # up or down
-    #         neg = -1 if t.action == 0 else 1
-    #         self.my = self.my + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-    #                                           - self.polynomial(x, y) - neg * self.my)
-    #     elif t.action in [2, 3]:  # left or right
-    #         neg = -1 if t.action == 2 else 1
-    #         self.mx = self.mx + self.alpha * (t.reward + self.gamma * (max(abs(self.mx), abs(self.my)) + self.b)
-    #                                           - self.polynomial(x, y) - neg * self.mx)
-    #     self.n += 1
-
     def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
         """takes the x and y positions on the grid to evaluate the value of a particular state"""
         return np.dot(np.array([x, y, 1]), self.W.T)
@@ -123,7 +110,49 @@ class LinearEstimator:
         return self.n
 
     def count_parameters(self):
-        return 4  
+        return 13
+
+
+class QuadraticEstimator:
+    def __init__(self, alpha, gamma, mask, b=0, actions=None):
+        if actions is None:
+            self.actions = {'up': 0, 'down': 1, 'left': 2, 'right': 3}
+        self.alpha = alpha
+        self.gamma = gamma
+        self.mask = mask  # expects the linear mask, which acts as identity, only for naming ... 
+        self.n = 0
+        self.mx = np.zeros(len(self.actions))
+        self.my = np.zeros(len(self.actions))
+        self.m2x = np.zeros(len(self.actions))
+        self.m2y = np.zeros(len(self.actions))
+        self.b = np.ones(len(self.actions)) * b
+        self.W = np.array([self.mx, self.m2x, self.my, self.m2y, self.b]).T
+
+    def update(self, t):
+        """function to update the parameters of our linear estimator"""
+        y, x = self.mask.apply(t.state)
+        a = t.action
+        y_hat = self.polynomial(x, y)[a]
+        X = np.array([x, x**2, y, y**2, 1]).T
+        y = t.reward + self.gamma * (max([np.abs(self.W[a,:2]).sum(), np.abs(self.W[a,:2]).sum()]) + self.b[a])
+        # print(self.W[a], X, y_hat, y)
+        self.W[a] = self.W[a] - 2 * self.alpha * X * (y_hat - y)
+        self.n += 1
+
+    def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
+        """takes the x and y positions on the grid to evaluate the value of a particular state"""
+        return np.dot(np.array([x, x**2, y, y**2, 1]), self.W.T)
+
+    def evaluate(self, s):  # returns an array of size len(actions)
+        y, x = self.mask.apply(s)
+        # print(self.polynomial(x, y))
+        return self.polynomial(x, y)
+
+    def get_visits(self, s):
+        return self.n
+
+    def count_parameters(self):
+        return 21
 
 
 class LinearNoveltyEstimator(LinearEstimator):

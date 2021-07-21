@@ -19,6 +19,11 @@ class linear(Mask):
         context = state
         return context
 
+class quadratic(Mask):
+    def apply(self, state):
+        context = state
+        return context
+
 class arrival_state(Mask):
     def apply(self, transition):
         context = transition.state_

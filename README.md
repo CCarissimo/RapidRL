@@ -17,3 +17,6 @@ Link to the overleaf https://www.overleaf.com/project/5fcbc0e6c47c2fc0475ba5b9
 
 The main.py script in the root folder is used to run all the experiments. Parameters for the run are to be specified on the command line. You can access instructions to use the command line tool by running the help function of main.py:
 > python main.py -h
+
+for example, try running
+python main.py test WILLEMSEN SIMPLEQ

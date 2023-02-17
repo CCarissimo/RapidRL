@@ -54,13 +54,6 @@ FOLDER = "%s\\Results" % (cwd)
 FILE_SIG = f"{EXPERIMENT}_{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
 print(FILE_SIG)
 
-# ENVS = {
-#     "WILLEMSEN": willemsen,
-#     "STRAIGHT": straight, 
-#     "POOL": pool,
-#     "START": star,
-# }
-
 if GRIDWORLD == "WILLEMSEN":
     grid = np.ones((3, 9)) * -1
     grid[1, :8] = 0
@@ -74,9 +67,7 @@ if GRIDWORLD == "WILLEMSEN":
     terminal_reward = set(terminal_state)
     initial_state = (1, 0)
     blacked_state = {(0, 8), (2, 8)}
-    # terminal_state = np.array(terminal_state)
-    # initial_state = np.array([1, 0])
-    # blacked_state = np.array([[0, 8], [2, 8]])
+
 elif GRIDWORLD == "STRAIGHT":
     grid = np.ones((3, 9)) * -1
     grid[1, :8] = 0
@@ -87,11 +78,10 @@ elif GRIDWORLD == "STRAIGHT":
         for j in range(8):
             terminal_state.append((i, j))
     terminal_state.append((1, 8))
-    # terminal_state.append([0, 8])
-    # terminal_state.append([2, 8])
     terminal_state = set(terminal_state)
     initial_state = (1, 0)
     blacked_state = {(0, 8), (2, 8)}
+
 elif GRIDWORLD == "POOL":
     grid = np.ones((8, 8)) * 0
     grid[3:6, 3:6] = -1
@@ -99,7 +89,7 @@ elif GRIDWORLD == "POOL":
     terminal_state = {(7, 7)}
     initial_state = (1, 0)
     blacked_state = {(5, 5), (4, 5), (5, 4), (4, 4)}
-    # blacked_state = np.array([[np.nan, np.nan], [np.nan, np.nan]])
+
 elif GRIDWORLD == "STAR":
     grid = np.ones((15, 15)) * 0.1
     grid[7, 0] = -1
@@ -110,6 +100,12 @@ elif GRIDWORLD == "STAR":
     initial_state = (7,7)
     blacked_state = {(np.nan, np.nan)}
 
+elif GRIDWORLD == "DEATH":
+    grid = np.ones((8, 8)) * 0
+    terminal_state = {(5, 4), (3, 5), (3, 3), (5, 6)}
+    initial_state = (1, 0)
+    blacked_state = {}
+
 if args.plotGW:
     _, _, _, _ = plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
@@ -119,7 +115,7 @@ env_greedy = Gridworld(grid, terminal_state, initial_state, blacked_state)
 if GRIDWORLD == "STRAIGHT" or GRIDWORLD=="WILLEMSEN":
     states = [(i, j) for i in [0, 1, 2] for j in range(env.grid_width)]
     env_shape = (3, env.grid_width)
-elif GRIDWORLD == "POOL" or GRIDWORLD == "STAR":
+elif GRIDWORLD == "POOL" or GRIDWORLD == "STAR" or GRIDWORLD == "DEATH":
     states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
     env_shape = (env.grid_height, env.grid_width)
 else:
@@ -130,12 +126,13 @@ filterwarnings('ignore')
 AGENTS = {
     "SIMPLE_Q": SimpleQ,
     "ME_Q": MEQ,
+    "SIMPLE_NOVELTOR": SimpleNoveltor,
     "NOVELTOR": Noveltor,
     "RMAX": RMAXQ,
     "PSEUDOCOUNT": Pseudocount
     }
 
-agent = AGENTS[AGENT_TYPE]()
+agent = AGENTS[AGENT_TYPE](ALPHA=ALPHA, GAMMA=GAMMA)
 rb = ReplayMemory(max_size=10000)
 
 trajectory = []
@@ -146,28 +143,25 @@ Gn = []
 step = 0
 
 # MAIN TRAINING and EVALUATION LOOP
-metrics = train_and_eval(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_greedy, states, env_shape, EXPLOIT)
 
-# for s in states:
-#     print(step, s, agent.Qe.prev_W, agent.Qe.predict(s, store=False))
-
-# print("Q_Table", agent.Qs.table)
+metrics, trajectory_metrics = online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_greedy,
+                                              states, env_shape, EXPLOIT)
 
 # PLOT Cumulative Returns over time #
 if PLOT:
     x = np.arange(0, metrics[-1]['steps'])
     yn = []
-    yg = []
+    # yg = []
     for i, metric in enumerate(metrics):
         Yn = 0
-        Yg = 0
+        # Yg = 0
         for j, g in enumerate(metric['Gn']):
             Yn += GAMMA ** j * g
-        for j, g in enumerate(metric['Gg']):
-            Yg += GAMMA ** j * g
+        # for j, g in enumerate(metric['Gg']):
+        #     Yg += GAMMA ** j * g
 
         yn.append(Yn)
-        yg.append(Yg)
+        # yg.append(Yg)
 
     cumEpilen = np.cumsum([ele[0] for ele in epilen])
     cumEpiG = np.cumsum([ele[1] for ele in epilen])
@@ -176,7 +170,7 @@ if PLOT:
     fig, (ax1, ax2) = plt.subplots(nrows=2, figsize=(10, 5))
     ax1.plot(x, yn, label='exploring')
 
-    ax1.plot(x, yg, label='exploiting')
+    # ax1.plot(x, yg, label='exploiting')
 
     ax1.set_ylabel('cumulative discounted reward')
     plt.xlabel('steps')
@@ -184,79 +178,85 @@ if PLOT:
     ax1.legend(bbox_to_anchor=(1.02, 1), loc="upper left")
 
     ax2.set_ylabel('trajectory length')
-    ax2.scatter(cumEpilen, [ele[0] for ele in epilen], s=5)
-    ax2.scatter(cumEpiG, [ele[1] for ele in epilen], s=5)
+    plt.plot([metrics[t]["traj_len"] for t in range(MAX_STEPS)])
+    # ax2.scatter(cumEpilen, [ele[0] for ele in epilen], s=5)
+    # ax2.scatter(cumEpiG, [ele[1] for ele in epilen], s=5)
     plt.tight_layout()
     plt.savefig(f'{FOLDER}\\G_{FILE_SIG}.png')
 
+    plt.figure(0)
+    plt.plot([metrics[t]["novelty"] for t in range(MAX_STEPS)])
+    plt.ylabel("Found Novelty")
+    plt.xlabel("timestep")
+
     # PLOT Estimator Evolution over time #
 
-    labels = [type(e.mask).__name__ for e in agent.Qe.estimators]
-
-    plt.figure(2)
-    W = []
-    for i in range(len(agent.Qe.estimators)):
-        w = [ele['W'][i] for ele in metrics]
-        W.append(w)
-        plt.plot(w, label=labels[i])
-    plt.title('W over time')
-    plt.legend()
-    plt.savefig(f'{FOLDER}\\W_{FILE_SIG}.png')
-
-    plt.figure(3)
-    K = []
-    for i in range(len(agent.Qe.estimators)):
-        k = [ele['K'][i] for ele in metrics]
-        K.append(k)
-        plt.plot(k, label=labels[i])
-    plt.title('K over time')
-    plt.legend()
-    plt.savefig(f'{FOLDER}\\K_{FILE_SIG}.png')
-
-    plt.figure(4)
-    for i in range(len(agent.Qe.estimators)):
-        RSS = [ele['RSS'][i] for ele in metrics]
-        plt.plot(RSS, label=labels[i])
-    plt.title('RSS over time')
-    plt.legend()
-    plt.savefig(f'{FOLDER}\\RSS_{FILE_SIG}.png')
-
-    # Complexity PLOT
-    plt.figure(5)
-    W = np.array(W)
-    K = np.array(K)
-    C = (W * K).sum(axis=0)  # matrix product
-    plt.title('Complexity over time')
-    plt.plot(C)
-    plt.savefig(f'{FOLDER}\\totK_{FILE_SIG}.png')
+    # labels = [type(e.mask).__name__ for e in agent.Qe.estimators]
+    #
+    # plt.figure(2)
+    # W = []
+    # for i in range(len(agent.Qe.estimators)):
+    #     w = [ele['W'][i] for ele in metrics]
+    #     W.append(w)
+    #     plt.plot(w, label=labels[i])
+    # plt.title('W over time')
+    # plt.legend()
+    # plt.savefig(f'{FOLDER}\\W_{FILE_SIG}.png')
+    #
+    # plt.figure(3)
+    # K = []
+    # for i in range(len(agent.Qe.estimators)):
+    #     k = [ele['K'][i] for ele in metrics]
+    #     K.append(k)
+    #     plt.plot(k, label=labels[i])
+    # plt.title('K over time')
+    # plt.legend()
+    # plt.savefig(f'{FOLDER}\\K_{FILE_SIG}.png')
+    #
+    # plt.figure(4)
+    # for i in range(len(agent.Qe.estimators)):
+    #     RSS = [ele['RSS'][i] for ele in metrics]
+    #     plt.plot(RSS, label=labels[i])
+    # plt.title('RSS over time')
+    # plt.legend()
+    # plt.savefig(f'{FOLDER}\\RSS_{FILE_SIG}.png')
+    #
+    # # Complexity PLOT
+    # plt.figure(5)
+    # W = np.array(W)
+    # K = np.array(K)
+    # C = (W * K).sum(axis=0)  # matrix product
+    # plt.title('Complexity over time')
+    # plt.plot(C)
+    # plt.savefig(f'{FOLDER}\\totK_{FILE_SIG}.png')
 
     # Value Function Plot
 
-    visits = agent.Qs.visits
+    visits = agent.visits
     hm = generate_heatmap(grid=env.grid, table=visits, aggf=lambda s: np.sum(s))
     plt.figure(6)
     plt.title(r"Updates Heatmap $\approx$ Visits")
     plt.imshow(hm, origin='lower')
     plt.savefig(f'{FOLDER}\\Visits_{FILE_SIG}.png')
 
-    plt.figure(7)
-    plt.title(r"AIC over time")
-    for i in range(len(agent.Qe.estimators)):
-        AIC = [ele['AIC'][i] for ele in metrics]
-        plt.plot(AIC, label=labels[i])
-    plt.legend()
-    plt.savefig(f'{FOLDER}\\AIC_{FILE_SIG}.png')
+    # plt.figure(7)
+    # plt.title(r"AIC over time")
+    # for i in range(len(agent.Qe.estimators)):
+    #     AIC = [ele['AIC'][i] for ele in metrics]
+    #     plt.plot(AIC, label=labels[i])
+    # plt.legend()
+    # plt.savefig(f'{FOLDER}\\AIC_{FILE_SIG}.png')
     
     if not ANIMATE: plt.show()
 
-# ANIMATION
 
+# ANIMATION
 def overlay_actions(A):
     global ann_list
     k = 0
     for i in range(env.grid_width):
         for j in range(env.grid_height):
-            if (j, i) in env.terminal_states:  # check my terminal states 
+            if (j, i) in env.terminal_states:  # check my terminal states
                 terminal_reward = env.grid[j, i]
                 if len(ann_list) > k:
                     ann_list[k].set_text(f"{terminal_reward:.1f}".lstrip('0'))

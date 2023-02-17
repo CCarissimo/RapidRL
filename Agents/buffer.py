@@ -21,3 +21,8 @@ class ReplayMemory:
         S = [self.buffer[index] for index in indices]
         S.append(self.buffer[self.index-1])
         return S
+
+    def reset(self):
+        self.buffer = [None] * self.max_size
+        self.index = 0
+        self.size = 0

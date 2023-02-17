@@ -92,24 +92,25 @@ def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None,
     cax = fig.add_axes([0.27, 0.75, 0.5, 0.05])
     colormap = plt.get_cmap('magma')
     im = ax.imshow(grid, cmap=colormap)
-    ax.set_xticks(np.arange(-.5, 8, 1), minor=True)
-    ax.set_yticks(np.arange(-.5, 3, 1), minor=True)
+    ax.set_xticks(np.arange(-.5, grid.shape[1], 1), minor=True)
+    ax.set_yticks(np.arange(-.5, grid.shape[0], 1), minor=True)
     ax.grid(which='minor', color='w', linewidth=2)
     cb = fig.colorbar(im, ax=ax, cax=cax, orientation='horizontal', label='reward')
     cb.ax.xaxis.set_ticks_position('top')
     cb.ax.xaxis.set_label_position('top')
     cb.ax.tick_params(labelsize=10)
+    cb.remove()  # comment if you want colorbar
     for i in range(len(grid[:, 0])):
         for j in range(len(grid[0, :])):
-            blacked_bool = (np.array([i, j]) == blacked_state).all(1)
-            initial_bool = (np.array([i, j]) == initial_state).all(0)
-            terminal_bool = (np.array([i, j]) == terminal_state).all(1)
-            if blacked_bool.any():
+            blacked_bool = (i, j) in blacked_state
+            initial_bool = (i, j) in initial_state
+            terminal_bool = (i, j) in terminal_state
+            if blacked_bool:
                 ax.text(j, i, 'X', ha="center", va="center", color="w", fontsize=20)
-            elif initial_bool.any():
+            elif initial_bool:
                 ax.text(j, i, 'S', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
                 ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
-            elif terminal_bool.any():
+            elif terminal_bool:
                 ax.text(j, i, 'T', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
                 ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
             else:

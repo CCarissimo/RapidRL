@@ -4,12 +4,12 @@ import numpy as np
 
 
 class Estimator(ABC):
-    def __init__(self, mask, actions=None):
+    def __init__(self, mask, actions=None, initial_value=1):
         if actions is None:
             self.actions = {'up': 0, 'down': 1, 'left': 2, 'right': 3}
         self.mask = mask
-        self.visits = defaultdict(lambda: np.zeros(len(self.actions)))
-        self.table = defaultdict(lambda: np.zeros(len(self.actions)))
+        self.visits = defaultdict(lambda: np.zeros(len(self.actions)) + initial_value)
+        self.table = defaultdict(lambda: np.zeros(len(self.actions)) + initial_value)
         self.n = 0
 
     def update(self, t):
@@ -33,8 +33,8 @@ class Estimator(ABC):
 
 
 class Q_table(Estimator):
-    def __init__(self, mask, alpha, gamma, actions=None):
-        super().__init__(mask=mask, actions=actions)
+    def __init__(self, mask, alpha, gamma, actions=None, initial_value=1):
+        super().__init__(mask=mask, actions=actions, initial_value=1)
         self.alpha = alpha
         self.gamma = gamma
 
@@ -58,18 +58,20 @@ class RMax_table(Q_table):
 
 
 class N_table(Q_table):
-    def update(self, t):
+    def update(self, t, novelty):
         c = self.mask.apply(t.state)
         c_ = self.mask.apply(t.state_)
         a = t.action
-        if t.terminal or t.state == t.state_:
-            novelty = 0
-        else:
-            novelty = 1 / (self.visits[c][a]+1)
-
         self.visits[c][a] += 1
+
+        if t.terminal:
+            novelty = 0
+            self.table[c_] = np.zeros(len(self.actions))
+        elif t.state == t.state_:
+            novelty = 0
+
         self.table[c][a] = self.table[c][a] + self.alpha * \
-                           (novelty + self.gamma * max(self.table[c_]) - self.table[c][a])
+                       (novelty + self.gamma * max(self.table[c_]) - self.table[c][a])
         self.n += 1
 
 
@@ -133,15 +135,15 @@ class QuadraticEstimator:
         y, x = self.mask.apply(t.state)
         a = t.action
         y_hat = self.polynomial(x, y)[a]
-        X = np.array([x, x**2, y, y**2, 1]).T
-        y = t.reward + self.gamma * (max([np.abs(self.W[a,:2]).sum(), np.abs(self.W[a,:2]).sum()]) + self.b[a])
+        X = np.array([x, x ** 2, y, y ** 2, 1]).T
+        y = t.reward + self.gamma * (max([np.abs(self.W[a, :2]).sum(), np.abs(self.W[a, :2]).sum()]) + self.b[a])
         # print(self.W[a], X, y_hat, y)
         self.W[a] = self.W[a] - 2 * self.alpha * X * (y_hat - y)
         self.n += 1
 
     def polynomial(self, x, y):  # needs some notion of distance to compute the polynomial
         """takes the x and y positions on the grid to evaluate the value of a particular state"""
-        return np.dot(np.array([x, x**2, y, y**2, 1]), self.W.T)
+        return np.dot(np.array([x, x ** 2, y, y ** 2, 1]), self.W.T)
 
     def evaluate(self, s):  # returns an array of size len(actions)
         y, x = self.mask.apply(s)
@@ -165,13 +167,13 @@ class LinearNoveltyEstimator(LinearEstimator):
         if t.terminal or t.state == t.state_:
             novelty = 0
         else:
-            novelty = 1 / (self.visits[t.state][t.action]+1)
+            novelty = 1 / (self.visits[t.state][t.action] + 1)
 
         y, x = t.state
         y_hat = self.polynomial(x, y)
         y = novelty + self.gamma * (np.max(np.abs(self.W[:-1])) + self.b)
         X = np.array([x, y, 1]).T
-        self.W = self.W - 2 * self.alpha * X * (y_hat - y) 
+        self.W = self.W - 2 * self.alpha * X * (y_hat - y)
         self.n += 1
         self.visits[t.state] += 1
 
@@ -192,12 +194,12 @@ class pseudoCountNovelty:
     def evaluate(self, s):
         """evaluation function for pseudo-counts by estimating feature occurrences"""
         C = [mask.apply(s) for mask in self.features]
-        rho = np.array([self.tables[i][c] for i, c in enumerate(C)])/self.t  # features before observation
+        rho = np.array([self.tables[i][c] for i, c in enumerate(C)]) / self.t  # features before observation
         self.update(s)
-        rho_ = np.array([self.tables[i][c] for i, c in enumerate(C)])/self.t  # features after observation
+        rho_ = np.array([self.tables[i][c] for i, c in enumerate(C)]) / self.t  # features after observation
         pseudoCount = rho.prod() * (1 - rho_.prod()) / (rho_.prod() - rho.prod())
         if pseudoCount == 0: pseudoCount += 0.0001
-        return self.alpha/np.sqrt(pseudoCount)
+        return self.alpha / np.sqrt(pseudoCount)
 
 
 class CombinedActionEstimator:
@@ -236,9 +238,9 @@ class CombinedAIC:
         self.estimators = estimators
         self.prev_V = np.zeros((4, len(self.estimators)))  # 4 actions, a value for each action
         self.prev_W = np.zeros(len(self.estimators))
-        self.RSS = np.ones(len(self.estimators))*1e-6
+        self.RSS = np.ones(len(self.estimators)) * 1e-6
         self.alpha = RSS_alpha
-        self.W = np.ones(len(self.estimators))/len(self.estimators)
+        self.W = np.ones(len(self.estimators)) / len(self.estimators)
         self.weights_method = weights_method
         self.gamma = self.estimators[0].gamma
         self.beta = beta
@@ -266,18 +268,20 @@ class CombinedAIC:
         if self.weights_method == "exponential":
             self.AIC = np.add(complexity, accuracy)
             aic = np.min(self.AIC)
-            w = np.exp(np.subtract(aic, self.AIC)/self.beta)
+            w = np.exp(np.subtract(aic, self.AIC) / self.beta)
         elif self.weights_method == "exp_size_corrected":
-            self.AIC = np.add(np.add(complexity, accuracy), np.add(2*np.power(K, 2), 2*K)/np.subtract(np.subtract(N, K), 1))/np.where(N!=0, N, 1)
+            self.AIC = np.add(np.add(complexity, accuracy),
+                              np.add(2 * np.power(K, 2), 2 * K) / np.subtract(np.subtract(N, K), 1)) / np.where(N != 0,
+                                                                                                                N, 1)
             aic = np.min(self.AIC)
-            w = np.exp(np.subtract(aic, self.AIC)/self.beta)
+            w = np.exp(np.subtract(aic, self.AIC) / self.beta)
         elif self.weights_method == "weighted_average":
             self.AIC = np.add(complexity, accuracy)
-            w = 1/self.AIC
+            w = 1 / self.AIC
         # baselines to compare our methods to
         # w_biased = sqrt(b/(n_u+b))
         # n_b/(n_u + n_b + 4*n_u*n_b*b)
-        self.W = w/np.sum(w)
+        self.W = w / np.sum(w)
         # print('AIC Weights', K, N, complexity, accuracy, self.RSS, self.AIC, self.W)
         return self.W
 
@@ -289,7 +293,7 @@ class CombinedAIC:
         # print('predict', V, self.prev_W)
         return np.dot(V, self.prev_W)  # Matrix @ Vector dot product
 
-    def update_RSS(self, a, r, s_): # un-discounted reward
+    def update_RSS(self, a, r, s_):  # un-discounted reward
         V = np.array([e.evaluate(s_) for e in self.estimators]).T
         # print("V", V.T, self.prev_V.T)
         Qsa = self.prev_V[a]  # check that this is a vector
@@ -297,7 +301,7 @@ class CombinedAIC:
         maxQs_a_ = np.max(np.dot(V, self.prev_W))  # check that this is a vector
         e = r + self.gamma * maxQs_a_ - Qsa
         e2 = np.power(e, 2)
-        self.RSS = np.multiply((1-self.alpha), self.RSS) + np.multiply(self.alpha, e2)
+        self.RSS = np.multiply((1 - self.alpha), self.RSS) + np.multiply(self.alpha, e2)
         # print("update_RSS:", V, Qsa, maxQs_a_, e, e2, self.RSS)
         return self.RSS
 

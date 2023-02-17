@@ -2,6 +2,46 @@ import numpy as np
 from .estimators import *
 from .masks import *
 
+
+class SimpleNoveltor:
+    def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
+        # self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
+        self.visits = defaultdict(lambda: 0)
+        if dim2D:
+            self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity(), initial_value=1)
+            # self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+            # self.Qe = CombinedAIC([self.Ns, self.Ng], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+        else:
+            self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity(), initial_value=1)
+            # self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
+            # self.Nc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
+            # self.Nr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
+            # self.Nl = LinearNoveltyEstimator(alpha=ALPHA, gamma=GAMMA)
+            # self.Qe = CombinedAIC([self.Ns], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
+
+    def select_action(self, t, greedy=False):
+        if t.action != 'initialize' and greedy:
+            reward = 1/(self.visits[t.state]) if t.state_ != t.state else 0
+        if greedy:  # use estimator with minimum RSS
+            values = self.Qs.table[t.state]
+            # print(t, values)
+            return np.random.choice(np.flatnonzero(values == values.max()))
+        else:  # use the AIC combined estimators
+            values = self.Ns.evaluate(t.state_)
+            return np.random.choice(np.flatnonzero(values == values.max()))
+
+    def update(self, transitions):
+        for t in transitions:
+            novelty = 0 if t.terminal else 1/(self.visits[t.state_] + 1)
+            self.Ns.update(t, novelty)
+
+    def update_visits(self, transition):
+        self.visits[transition.state_] += 1
+
+    def reset_visits(self):
+        self.visits = defaultdict(lambda: 0)
+
+
 class Noveltor:
     def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
         self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
@@ -34,6 +74,7 @@ class Noveltor:
             self.Qs.update(t)
             self.Qe.update(t)
 
+
 class LinearNoveltor:
     def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
         if dim2D:
@@ -64,6 +105,7 @@ class LinearNoveltor:
     def update(self, transitions):
         for t in transitions:
             self.Qe.update(t)
+
 
 class Pseudocount:  
     def __init__(self, dim2D=False, EPSILON=0.1, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
@@ -103,6 +145,7 @@ class Pseudocount:
             self.Qe.update(t)
             t.reward -= novelty
 
+
 class SimpleQ:
     def __init__(self, dim2D=False, EPSILON=0.1, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
         self.epsilon = EPSILON
@@ -131,6 +174,7 @@ class SimpleQ:
     def update(self, transitions):
         for t in transitions:
             self.Qe.update(t)
+
 
 class MEQ:
     def __init__(self, dim2D=False, EPSILON=0.1, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
@@ -168,6 +212,7 @@ class MEQ:
             self.Qe.update(t)
             # self.Qs.update(t)
 
+
 class RMAXQ:
     def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
         if dim2D:
@@ -195,6 +240,7 @@ class RMAXQ:
     def update(self, transitions):
         for t in transitions:
             self.Qe.update(t)
+
 
 class RMAXLin:
     def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):

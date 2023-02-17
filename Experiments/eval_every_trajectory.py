@@ -2,6 +2,7 @@
 from tqdm.auto import tqdm
 import numpy as np
 
+
 def eval_every_trajectory(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_greedy, states, env_shape, EXPLOIT=True):
     trajectory = []
     trajectories = []

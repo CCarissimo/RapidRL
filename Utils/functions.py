@@ -111,10 +111,12 @@ def plot_gridworld(grid, terminal_state, initial_state, blacked_state, fig=None,
                 ax.text(j, i, 'S', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
                 ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
             elif terminal_bool:
-                ax.text(j, i, 'T', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
-                ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
+                # ax.text(j, i, 'T', ha="center", va="bottom", color="black", position=(j + 0.25, i - 0.15))
+                # ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
+                ax.text(j, i, 'X', ha="center", va="center", color="w", fontsize=20)
             else:
-                ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
+                # ax.text(j, i, grid[i, j], ha="center", va="center", color="w")
+                pass
     if show:
         plt.show()
 

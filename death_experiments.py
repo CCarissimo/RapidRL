@@ -22,6 +22,11 @@ What this means is best explained in the paper. In a nutshell, agents seek to ex
 rewards which reflect how new a particular visited state is. They use these novelty rewards as they would regular
 rewards and update an online estimate of the expected sum of discounted future novelty rewards, in a Q-table, to make
 their decisions. They follow an epsilon greedy policy with their novelty Q-table.
+
+All calculated metrics are saved in a pandas dataframe for ease of data analysis.
+- If you would like to calculate more things than are currently saved, simply add them to the results dictionary.
+- You can see in Experiments.online_learning.online_learning what metrics are saved during trajectories
+- Edit Experiments.online_learning.online_learning if you wish to save additional things
 """
 
 import Agents

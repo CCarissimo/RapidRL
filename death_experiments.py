@@ -66,7 +66,7 @@ for buffer_size in buffer_size_list:
         env_shape = (env.grid_height, env.grid_width)
 
         agent = Agents.SimpleNoveltor(ALPHA=ALPHA, GAMMA=GAMMA)
-        rb = Agents.ReplayMemory(max_size=10000)
+        rb = Agents.ReplayMemory(max_size=buffer_size)
 
         metrics, trajectory_metrics = Experiments.online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb,
                                                                   env, states, env_shape)

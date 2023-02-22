@@ -91,8 +91,8 @@ for buffer_size in buffer_size_list:
         lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
 
         # store final visits and n_tables
-        # visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
-        # n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+        visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
+        n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
 
         # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
         visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
@@ -124,6 +124,8 @@ for buffer_size in buffer_size_list:
             "n_table_differences_var": np.var(n_table_differences),
         }
         master.append(results)
+
+    storage[buffer_size] = {"visits": visits, "n_tables": n_tables}
 
 
 final_df = pd.DataFrame(master)

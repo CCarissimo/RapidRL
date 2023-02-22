@@ -42,14 +42,16 @@ import Utils
 import numpy as np
 import pandas as pd
 import os
+import pickle
 
-MAX_STEPS = 10000
+MAX_STEPS = 100
 EPISODE_TIMEOUT = 10000
 GAMMA = 0.2
 ALPHA = 0.1
 BATCH_SIZE = 10
-buffer_size_list = np.linspace(100, MAX_STEPS, 31).astype(int)
-REPETITIONS = 40
+N_BATCH_EXPERIMENTS = 2
+buffer_size_list = np.linspace(100, MAX_STEPS, N_BATCH_EXPERIMENTS).astype(int)
+REPETITIONS = 2
 
 cwd = os.getcwd()
 FOLDER = "%s" % cwd
@@ -105,7 +107,7 @@ for buffer_size in buffer_size_list:
                                    for s in states] for n in range(len(trajectory_metrics) - 1)]
 
         abs_n_table_differences = [
-            [(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).abs().mean()
+            [np.abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
              for s in states] for n in range(len(trajectory_metrics) - 1)]
 
         # print(n_table_differences)
@@ -131,3 +133,6 @@ for buffer_size in buffer_size_list:
 final_df = pd.DataFrame(master)
 print(final_df)
 final_df.to_csv(FOLDER + "/" + FILE_SIG + ".csv")
+
+with open("tables_storage", "wb") as file:
+    pickle.dump(storage, file)

@@ -65,8 +65,11 @@ blacked_state = {}
 _, _, _, _ = Utils.plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
 master = []
+storage = {}
 
 for buffer_size in buffer_size_list:
+    visits = []
+    n_tables = []
     for iteration in range(REPETITIONS):
         env = Environments.Gridworld(grid, terminal_state, initial_state, blacked_state)
         states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
@@ -81,12 +84,23 @@ for buffer_size in buffer_size_list:
         trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
         lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
 
+        # store final visits and n_tables
+        # visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
+        # n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+
         # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
         visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
                                for s in states] for n in range(len(trajectory_metrics) - 1)]
 
         n_table_differences = [[(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
                                 for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+        abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
+                                   for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+        abs_n_table_differences = [
+            [(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).abs().mean()
+             for s in states] for n in range(len(trajectory_metrics) - 1)]
 
         # print(n_table_differences)
 
@@ -97,11 +111,14 @@ for buffer_size in buffer_size_list:
             "lifetime_average": np.mean(lifetime_per_agent),
             "lifetime_variance": np.var(lifetime_per_agent),
             "visits_differences_mean": np.mean(visits_differences),
+            "abs_visits_differences_mean": np.mean(abs_visits_differences),
             "visits_differences_var": np.var(visits_differences),
             "n_table_differences_mean": np.mean(n_table_differences),
+            "abs_n_table_differences_mean": np.mean(abs_n_table_differences),
             "n_table_differences_var": np.var(n_table_differences),
         }
         master.append(results)
+
 
 final_df = pd.DataFrame(master)
 print(final_df)

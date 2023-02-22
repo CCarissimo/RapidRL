@@ -42,8 +42,8 @@ EPISODE_TIMEOUT = 10000
 GAMMA = 0.2
 ALPHA = 0.1
 BATCH_SIZE = 10
-buffer_size_list = [100, 500, 1000, 5000, 10000]
-REPETITIONS = 10
+buffer_size_list = np.linspace(100, MAX_STEPS, 31).astype(int)
+REPETITIONS = 40
 
 cwd = os.getcwd()
 FOLDER = "%s" % cwd

@@ -43,13 +43,13 @@ import numpy as np
 import pandas as pd
 import os
 
-MAX_STEPS = 100
-EPISODE_TIMEOUT = 10
+MAX_STEPS = 10000
+EPISODE_TIMEOUT = 10000
 GAMMA = 0.2
 ALPHA = 0.1
 BATCH_SIZE = 10
-buffer_size_list = [100, 1000, 10000]
-REPETITIONS = 2
+buffer_size_list = np.linspace(100, MAX_STEPS, 31).astype(int)
+REPETITIONS = 40
 
 cwd = os.getcwd()
 FOLDER = "%s" % cwd
@@ -58,7 +58,9 @@ print(FILE_SIG)
 
 grid = np.zeros((15, 15))
 
+np.random.seed(seed=0)
 x_random_death_states = np.random.randint(1, 15, size=10)
+np.random.seed(seed=1)
 y_random_death_states = np.random.randint(1, 15, size=10)
 terminal_state = set(zip(y_random_death_states, x_random_death_states))
 
@@ -69,8 +71,11 @@ blacked_state = {}
 _, _, _, _ = Utils.plot_gridworld(grid, terminal_state, initial_state, blacked_state)
 
 master = []
+storage = {}
 
 for buffer_size in buffer_size_list:
+    visits = []
+    n_tables = []
     for iteration in range(REPETITIONS):
         env = Environments.Gridworld(grid, terminal_state, initial_state, blacked_state)
         states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
@@ -85,12 +90,25 @@ for buffer_size in buffer_size_list:
         trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
         lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
 
+        # store final visits and n_tables
+        # visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
+        # n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+
         # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
         visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
                                for s in states] for n in range(len(trajectory_metrics) - 1)]
 
         n_table_differences = [[(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
                                 for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+        abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
+                                   for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+        abs_n_table_differences = [
+            [(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).abs().mean()
+             for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+        # print(n_table_differences)
 
         results = {
             "buffer_size": buffer_size,
@@ -99,11 +117,14 @@ for buffer_size in buffer_size_list:
             "lifetime_average": np.mean(lifetime_per_agent),
             "lifetime_variance": np.var(lifetime_per_agent),
             "visits_differences_mean": np.mean(visits_differences),
+            "abs_visits_differences_mean": np.mean(abs_visits_differences),
             "visits_differences_var": np.var(visits_differences),
             "n_table_differences_mean": np.mean(n_table_differences),
+            "abs_n_table_differences_mean": np.mean(abs_n_table_differences),
             "n_table_differences_var": np.var(n_table_differences),
         }
         master.append(results)
+
 
 final_df = pd.DataFrame(master)
 print(final_df)

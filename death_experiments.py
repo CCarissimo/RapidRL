@@ -37,13 +37,13 @@ import numpy as np
 import pandas as pd
 import os
 
-MAX_STEPS = 100
-EPISODE_TIMEOUT = 10
+MAX_STEPS = 10000
+EPISODE_TIMEOUT = 10000
 GAMMA = 0.2
 ALPHA = 0.1
 BATCH_SIZE = 10
-buffer_size_list = [100, 1000, 10000]
-REPETITIONS = 2
+buffer_size_list = [100, 500, 1000, 5000, 10000]
+REPETITIONS = 10
 
 cwd = os.getcwd()
 FOLDER = "%s" % cwd

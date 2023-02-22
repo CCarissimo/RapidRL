@@ -52,7 +52,9 @@ print(FILE_SIG)
 
 grid = np.zeros((15, 15))
 
+np.random.seed(seed=0)
 x_random_death_states = np.random.randint(1, 15, size=10)
+np.random.seed(seed=1)
 y_random_death_states = np.random.randint(1, 15, size=10)
 terminal_state = set(zip(y_random_death_states, x_random_death_states))
 
@@ -85,6 +87,8 @@ for buffer_size in buffer_size_list:
 
         n_table_differences = [[(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
                                 for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+        # print(n_table_differences)
 
         results = {
             "buffer_size": buffer_size,

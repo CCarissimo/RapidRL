@@ -17,11 +17,17 @@ Specifically:
 In these experiments, we will try to test all the different flavours of death and information preservation. We can
 think of such processes as artificial culture creation, and the stories that we tell our children.
 
-Finally, these agents will not be typical Q-learning agents. They will be exploring agents that learn with novelty values.
-What this means is best explained in the paper. In a nutshell, agents seek to explore the environment, gathering novelty
-rewards which reflect how new a particular visited state is. They use these novelty rewards as they would regular
-rewards and update an online estimate of the expected sum of discounted future novelty rewards, in a Q-table, to make
-their decisions. They follow an epsilon greedy policy with their novelty Q-table.
+Finally, these agents will not be typical Q-learning agents.
+They will be exploring agents that learn with novelty values.
+What this means is best explained in the paper.
+In a nutshell, agents seek to explore the environment, gathering novelty
+rewards which reflect how NEW (novel) a particular visited state is.
+This is calculated for a state "s" as 1/(Vs+1) where Vs is the number of times state s was visited.
+Thus, the novelty of a state is monotonically decreasing (1/2, 1/3, ..., 1/100, ... ) when the state is visited,
+ultimately tending towards 0.
+They use these novelty rewards as they would regular rewards and update an online
+estimate of the expected sum of discounted future novelty rewards in a Q-table.
+To choose their next action they use an epsilon-greedy policy.
 
 All calculated metrics are saved in a pandas dataframe for ease of data analysis.
 - If you would like to calculate more things than are currently saved, simply add them to the results dictionary.

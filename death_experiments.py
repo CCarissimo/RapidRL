@@ -117,6 +117,7 @@ for size_stories in size_stories_list:
             results = {
                 "buffer_size": buffer_size,
                 "size_stories": size_stories,
+                "keep_deaths": keep_deaths,
                 "repetition": iteration,
                 "number_of_deaths": len(trajectory_metrics),
                 "lifetime_average": np.mean(lifetime_per_agent),

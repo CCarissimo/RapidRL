@@ -99,7 +99,7 @@ for buffer_size in buffer_size_list:
                                    for s in states] for n in range(len(trajectory_metrics) - 1)]
 
         abs_n_table_differences = [
-            [(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).abs().mean()
+            [np.abs(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
              for s in states] for n in range(len(trajectory_metrics) - 1)]
 
         # print(n_table_differences)

@@ -43,13 +43,14 @@ import numpy as np
 import pandas as pd
 import os
 
-MAX_STEPS = 10000
+MAX_STEPS = 100
 EPISODE_TIMEOUT = 10000
 GAMMA = 0.2
 ALPHA = 0.1
 BATCH_SIZE = 10
-buffer_size_list = np.linspace(100, MAX_STEPS, 31).astype(int)
-REPETITIONS = 40
+size_stories_list = np.linspace(0, 1000, 31).astype(int)
+buffer_size = 1000  # np.linspace(100, MAX_STEPS, 31).astype(int)
+REPETITIONS = 1
 
 cwd = os.getcwd()
 FOLDER = "%s" % cwd
@@ -73,57 +74,60 @@ _, _, _, _ = Utils.plot_gridworld(grid, terminal_state, initial_state, blacked_s
 master = []
 storage = {}
 
-for buffer_size in buffer_size_list:
+for size_stories in size_stories_list:
     visits = []
     n_tables = []
-    for iteration in range(REPETITIONS):
-        env = Environments.Gridworld(grid, terminal_state, initial_state, blacked_state)
-        states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
-        env_shape = (env.grid_height, env.grid_width)
+    for keep_deaths in [True, False]:
+        for iteration in range(REPETITIONS):
+            env = Environments.Gridworld(grid, terminal_state, initial_state, blacked_state)
+            states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
+            env_shape = (env.grid_height, env.grid_width)
 
-        agent = Agents.SimpleNoveltor(ALPHA=ALPHA, GAMMA=GAMMA)
-        rb = Agents.ReplayMemory(max_size=buffer_size)
+            agent = Agents.SimpleNoveltor(ALPHA=ALPHA, GAMMA=GAMMA)
+            rb = Agents.ReplayMemory(max_size=buffer_size)
 
-        metrics, trajectory_metrics = Experiments.online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb,
-                                                                  env, states, env_shape)
+            metrics, trajectory_metrics = Experiments.online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb,
+                                                                      env, states, env_shape, size_stories=size_stories,
+                                                                      keep_deaths=keep_deaths)
 
-        trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
-        lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
+            trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
+            lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
 
-        # store final visits and n_tables
-        # visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
-        # n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+            # store final visits and n_tables
+            # visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
+            # n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
 
-        # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
-        visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
-                               for s in states] for n in range(len(trajectory_metrics) - 1)]
-
-        n_table_differences = [[(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
-                                for s in states] for n in range(len(trajectory_metrics) - 1)]
-
-        abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
+            # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
+            visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
                                    for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-        abs_n_table_differences = [
-            [abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
-             for s in states] for n in range(len(trajectory_metrics) - 1)]
+            n_table_differences = [[(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
+                                    for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-        # print(n_table_differences)
+            abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
+                                       for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-        results = {
-            "buffer_size": buffer_size,
-            "repetition": iteration,
-            "number_of_deaths": len(trajectory_metrics),
-            "lifetime_average": np.mean(lifetime_per_agent),
-            "lifetime_variance": np.var(lifetime_per_agent),
-            "visits_differences_mean": np.mean(visits_differences),
-            "abs_visits_differences_mean": np.mean(abs_visits_differences),
-            "visits_differences_var": np.var(visits_differences),
-            "n_table_differences_mean": np.mean(n_table_differences),
-            "abs_n_table_differences_mean": np.mean(abs_n_table_differences),
-            "n_table_differences_var": np.var(n_table_differences),
-        }
-        master.append(results)
+            abs_n_table_differences = [
+                [abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
+                 for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+            # print(n_table_differences)
+
+            results = {
+                "buffer_size": buffer_size,
+                "size_stories": size_stories,
+                "repetition": iteration,
+                "number_of_deaths": len(trajectory_metrics),
+                "lifetime_average": np.mean(lifetime_per_agent),
+                "lifetime_variance": np.var(lifetime_per_agent),
+                "visits_differences_mean": np.mean(visits_differences),
+                "abs_visits_differences_mean": np.mean(abs_visits_differences),
+                "visits_differences_var": np.var(visits_differences),
+                "n_table_differences_mean": np.mean(n_table_differences),
+                "abs_n_table_differences_mean": np.mean(abs_n_table_differences),
+                "n_table_differences_var": np.var(n_table_differences),
+            }
+            master.append(results)
 
 
 final_df = pd.DataFrame(master)

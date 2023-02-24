@@ -8,7 +8,7 @@ import pprint
 pp = pprint.PrettyPrinter(indent=4)
 
 
-def online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, states, env_shape):
+def online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, states, env_shape, size_stories, keep_deaths):
     trajectory = []
     trajectories = []
     metrics = []
@@ -65,7 +65,7 @@ def online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, stat
 
             epilen.append(len(Gn))
             agent.reset_visits()
-            # rb.reset()
+            rb.reset(size_stories, keep_deaths=keep_deaths)
             env.reset()
             trajectory = []
             Gn = []

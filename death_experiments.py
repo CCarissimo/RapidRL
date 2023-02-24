@@ -76,9 +76,10 @@ master = []
 storage = {}
 
 for size_stories in size_stories_list:
-    visits = []
-    n_tables = []
+    tmp = {}
     for keep_deaths in [True, False]:
+        visits = []
+        n_tables = []
         for iteration in range(REPETITIONS):
             env = Environments.Gridworld(grid, terminal_state, initial_state, blacked_state)
             states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
@@ -131,7 +132,9 @@ for size_stories in size_stories_list:
             }
             master.append(results)
 
-    storage[buffer_size] = {"visits": visits, "n_tables": n_tables}
+        tmp[keep_deaths] = {"visits": visits, "n_tables": n_tables}
+
+    storage[size_stories] = tmp
 
 
 final_df = pd.DataFrame(master)

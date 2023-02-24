@@ -42,6 +42,7 @@ import Utils
 import numpy as np
 import pandas as pd
 import os
+import pickle
 
 MAX_STEPS = 100
 EPISODE_TIMEOUT = 10000
@@ -93,9 +94,9 @@ for size_stories in size_stories_list:
             trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
             lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
 
-            # store final visits and n_tables
-            # visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
-            # n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+        # store final visits and n_tables
+        visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
+        n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
 
             # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
             visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
@@ -107,11 +108,11 @@ for size_stories in size_stories_list:
             abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
                                        for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-            abs_n_table_differences = [
-                [abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
-                 for s in states] for n in range(len(trajectory_metrics) - 1)]
+        abs_n_table_differences = [
+            [np.abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
+             for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-            # print(n_table_differences)
+        # print(n_table_differences)
 
             results = {
                 "buffer_size": buffer_size,
@@ -129,7 +130,12 @@ for size_stories in size_stories_list:
             }
             master.append(results)
 
+    storage[buffer_size] = {"visits": visits, "n_tables": n_tables}
+
 
 final_df = pd.DataFrame(master)
 print(final_df)
 final_df.to_csv(FOLDER + "/" + FILE_SIG + ".csv")
+
+with open("tables_storage", "wb") as file:
+    pickle.dump(storage, file)

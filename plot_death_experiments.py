@@ -1,10 +1,11 @@
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 df = pd.read_csv("death_experiment_n[10000]_alpha[0.1]_gamma[0.2]_batch[10].csv")
 print(df)
 
-buffer_size_list = [100, 500, 1000, 5000, 10000]
+buffer_size_list = np.linspace(100, 10000, 31)
 
 means = df.groupby(['buffer_size']).mean()
 std = df.groupby(["buffer_size"]).std()

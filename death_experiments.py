@@ -44,18 +44,18 @@ import pandas as pd
 import os
 import pickle
 
-MAX_STEPS = 100
+MAX_STEPS = 10000
 EPISODE_TIMEOUT = 10000
 GAMMA = 0.2
 ALPHA = 0.1
 BATCH_SIZE = 10
 size_stories_list = np.linspace(0, 1000, 31).astype(int)
 buffer_size = 1000  # np.linspace(100, MAX_STEPS, 31).astype(int)
-REPETITIONS = 1
+REPETITIONS = 20
 
 cwd = os.getcwd()
 FOLDER = "%s" % cwd
-FILE_SIG = f"death_experiment_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]"
+FILE_SIG = f"death_experiment_shareDeath_rep({REPETITIONS})_n({MAX_STEPS})_buffer({buffer_size})"
 print(FILE_SIG)
 
 grid = np.zeros((15, 15))
@@ -94,9 +94,9 @@ for size_stories in size_stories_list:
             trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
             lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
 
-        # store final visits and n_tables
-        visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
-        n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+            # store final visits and n_tables
+            visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
+            n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
 
             # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
             visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
@@ -108,11 +108,11 @@ for size_stories in size_stories_list:
             abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
                                        for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-        abs_n_table_differences = [
-            [np.abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
-             for s in states] for n in range(len(trajectory_metrics) - 1)]
+            abs_n_table_differences = [
+                [np.abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
+                 for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-        # print(n_table_differences)
+            # print(n_table_differences)
 
             results = {
                 "buffer_size": buffer_size,

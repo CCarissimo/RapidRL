@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import tqdm
 import os
 import argparse
+import pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument("experiment", help="is it experiment A, B or C",
@@ -28,6 +29,7 @@ parser.add_argument("--rss_alpha", help="float: the alpha value used for updates
 parser.add_argument("--lin_alpha", help="float: the alpha value used for updates in polynomial estimators, default at 0.0001", type=float, default=0.0001)
 parser.add_argument("-g", "--gamma", help="float: the discount factor default at 0.9", type=float, default=0.9)
 parser.add_argument("-B", "--batch_size", help="integer: the number of samples used in training batches, default at 10", type=int, default=10)
+parser.add_argument("--buffer_size", help="integer: the number of samples stored in the replay buffer", type=int, default=10000)
 parser.add_argument("--weights_method", help="string: method used to calculate weights in estimator combination, default is exp_size_corrected", type=str, default="exp_size_corrected")
 parser.add_argument("-e", "--epsilon", help="float: the exploration parameter for epsilon greedy exploration, default at 0.1", type=float, default=0.1)
 
@@ -42,6 +44,7 @@ MAX_STEPS = args.max_steps
 EPISODE_TIMEOUT = args.timeout
 GAMMA = args.gamma
 ALPHA = args.alpha
+BUFFER_SIZE = args.buffer_size
 RSS_ALPHA = args.rss_alpha
 LIN_ALPHA = args.lin_alpha
 BATCH_SIZE = args.batch_size
@@ -50,6 +53,7 @@ EXPLOIT = args.noexploit
 EPSILON = args.epsilon
 
 cwd = os.getcwd()
+
 FOLDER = "%s\\Results" % (cwd)
 FILE_SIG = f"{EXPERIMENT}_{AGENT_TYPE}_{GRIDWORLD}_n[{MAX_STEPS}]_alpha[{ALPHA}]_gamma[{GAMMA}]_batch[{BATCH_SIZE}]_weights[{WEIGHTS_METHOD}]_exploit[{EXPLOIT}]"
 print(FILE_SIG)
@@ -101,9 +105,14 @@ elif GRIDWORLD == "STAR":
     blacked_state = {(np.nan, np.nan)}
 
 elif GRIDWORLD == "DEATH":
-    grid = np.ones((8, 8)) * 0
-    terminal_state = {(5, 4), (3, 5), (3, 3), (5, 6)}
-    initial_state = (1, 0)
+    world_size = 10
+    grid = np.zeros((world_size, world_size))
+    np.random.seed(seed=0)
+    x_random_death_states = np.random.randint(1, world_size, size=world_size)
+    np.random.seed(seed=1)
+    y_random_death_states = np.random.randint(1, world_size, size=world_size)
+    terminal_state = set(zip(y_random_death_states, x_random_death_states))
+    initial_state = (0, 0)
     blacked_state = {}
 
 if args.plotGW:
@@ -133,7 +142,7 @@ AGENTS = {
     }
 
 agent = AGENTS[AGENT_TYPE](ALPHA=ALPHA, GAMMA=GAMMA)
-rb = ReplayMemory(max_size=10000)
+rb = ReplayMemory(max_size=BUFFER_SIZE)
 
 trajectory = []
 trajectories = []
@@ -144,8 +153,11 @@ step = 0
 
 # MAIN TRAINING and EVALUATION LOOP
 
-metrics, trajectory_metrics = online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env, env_greedy,
-                                              states, env_shape, EXPLOIT)
+metrics, trajectory_metrics = online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env,
+                                              states, env_shape)
+
+with open("n_values", "wb") as file:
+    pickle.dump([metrics[i]['V'] for i in range(len(metrics))], file)
 
 # PLOT Cumulative Returns over time #
 if PLOT:
@@ -289,7 +301,7 @@ if ANIMATE:
     tx = ax.set_title('')
     # plt.tight_layout()
     fig.subplots_adjust(right=.8)
-    im = ax.imshow(metrics[0]['V'], animated=True, origin='upper', vmin=metrics[0]['V'].min(), vmax=metrics[0]['V'].max())
+    im = ax.imshow(metrics[0]['V'], animated=True, origin='upper', vmin=0, vmax=1/(1-GAMMA))
     cb = fig.colorbar(im, cax=cax)
     # bars = ax2.bar(range(len(labels)), metrics[0]['W'], tick_label=labels, animated=True)
     # ax2.set_ylim(0, 1)
@@ -299,7 +311,7 @@ if ANIMATE:
     # for i in range(len(metrics)):
         arr = metrics[i]['V']
         vmax = np.max(arr)
-        vmin = np.min(arr)
+        vmin = 0  # np.min(arr)
         
         im.set_data(arr)
         im.set_clim(vmin, vmax)
@@ -310,7 +322,7 @@ if ANIMATE:
         # for j, b in enumerate(bars):
         #     b.set_height(metrics[i]['W'][j])
 
-    ani = animation.FuncAnimation(fig, animate, interval=int(30000/len(metrics)), frames=len(metrics))
+    ani = animation.FuncAnimation(fig, animate, interval=int(1), frames=len(metrics))
     plt.show()
 
 # Visualise Q-learning

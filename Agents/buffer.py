@@ -22,7 +22,33 @@ class ReplayMemory:
         S.append(self.buffer[self.index-1])
         return S
 
-    def reset(self):
-        self.buffer = [None] * self.max_size
-        self.index = 0
-        self.size = 0
+    def reset(self, size_stories, keep_deaths=False):
+        if not keep_deaths:
+            tmp = []
+            if size_stories > 0:
+                sample = self.sample(size_stories)
+                for s in sample:
+                    tmp.append(s)
+            self.buffer = [None] * self.max_size
+            self.index = 0
+            self.size = 0
+            for i in range(len(tmp)):
+                self.append(tmp.pop())
+        else:
+            tmp = []
+            for i in range(len(self.buffer)):
+                transition = self.buffer[i]
+                if transition is None:
+                    continue
+                if transition.terminal:
+                    tmp.append(transition)
+            space = size_stories - len(tmp)
+            if space > 0:
+                sample = self.sample(space)
+                for s in sample:
+                    tmp.append(s)
+            self.buffer = [None] * self.max_size
+            self.index = 0
+            self.size = 0
+            for i in range(len(tmp)):
+                self.append(tmp.pop())

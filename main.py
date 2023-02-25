@@ -142,7 +142,7 @@ AGENTS = {
     }
 
 agent = AGENTS[AGENT_TYPE](ALPHA=ALPHA, GAMMA=GAMMA)
-rb = ReplayMemory(max_size=BUFFER_SIZE)
+rb = ReplayMemory(max_size=BUFFER_SIZE, len_death_memories=10)
 
 trajectory = []
 trajectories = []

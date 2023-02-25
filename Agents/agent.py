@@ -4,15 +4,19 @@ from .masks import *
 
 
 class SimpleNoveltor:
-    def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, RSS_alpha=0.1, LIN_alpha=0.0001, WEIGHTS_METHOD='exp_size_corrected'):
+    def __init__(self, dim2D=False, ALPHA=0.1, GAMMA=0.9, initial_value=1):
         # self.Qs = Q_table(alpha=ALPHA, gamma=GAMMA, mask=identity())
         self.visits = defaultdict(lambda: 0)
+        self.alpha = ALPHA
+        self.gamma = GAMMA
+        self.initial_value = initial_value
+
         if dim2D:
             self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity(), initial_value=1)
             # self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
             # self.Qe = CombinedAIC([self.Ns, self.Ng], RSS_alpha=ALPHA, weights_method=WEIGHTS_METHOD)
         else:
-            self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity(), initial_value=1)
+            self.Ns = N_table(alpha=ALPHA, gamma=GAMMA, mask=identity(), initial_value=self.initial_value)
             # self.Ng = N_table(alpha=ALPHA, gamma=GAMMA, mask=global_context())
             # self.Nc = N_table(alpha=ALPHA, gamma=GAMMA, mask=column())
             # self.Nr = N_table(alpha=ALPHA, gamma=GAMMA, mask=row())
@@ -40,6 +44,10 @@ class SimpleNoveltor:
 
     def reset_visits(self):
         self.visits = defaultdict(lambda: 0)
+
+    def reset_q_table(self):
+        self.Ns = N_table(alpha=self.alpha, gamma=self.gamma, mask=identity(), initial_value=self.initial_value)
+
 
 
 class Noveltor:

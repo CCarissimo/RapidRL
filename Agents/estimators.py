@@ -9,7 +9,11 @@ class Estimator(ABC):
             self.actions = {'up': 0, 'down': 1, 'left': 2, 'right': 3}
         self.mask = mask
         self.visits = defaultdict(lambda: np.zeros(len(self.actions)) + initial_value)
-        self.table = defaultdict(lambda: np.zeros(len(self.actions)) + initial_value)
+        if initial_value == "random":
+            self.table = defaultdict(lambda: np.random.random(size=len(self.actions)))
+        elif type(initial_value) is int:
+            self.table = defaultdict(lambda: np.zeros(len(self.actions)) + initial_value)
+
         self.n = 0
 
     def update(self, t):

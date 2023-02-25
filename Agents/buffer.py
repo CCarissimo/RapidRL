@@ -15,7 +15,7 @@ class ReplayMemory:
     def append(self, obj):
         self.buffer[self.index] = obj
         if obj.terminal:
-            for i in range(0, self.len_death_memories):
+            for i in range(0, min(self.size, self.len_death_memories)):
                 ind = (self.index - i) % self.max_size
                 self.death_memories.append(self.buffer[ind])
         self.size = min(self.size + 1, self.max_size)

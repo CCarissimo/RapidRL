@@ -141,8 +141,8 @@ AGENTS = {
     "PSEUDOCOUNT": Pseudocount
     }
 
-agent = AGENTS[AGENT_TYPE](ALPHA=ALPHA, GAMMA=GAMMA)
-rb = ReplayMemory(max_size=BUFFER_SIZE, len_death_memories=10)
+agent = AGENTS[AGENT_TYPE](ALPHA=ALPHA, GAMMA=GAMMA, initial_value="random")
+rb = ReplayMemory(max_size=BUFFER_SIZE, len_death_memories=2)
 
 trajectory = []
 trajectories = []

@@ -16,6 +16,8 @@ class ReplayMemory:
 
     def append(self, obj):
         self.buffer[self.index] = obj
+        self.size = min(self.size + 1, self.max_size)
+
         if obj.terminal:
             # save death memories
             for i in range(0, min(self.size, self.len_death_memories)):
@@ -25,7 +27,7 @@ class ReplayMemory:
             S = self.sample(min(self.size, self.len_random_memories))
             for s in S:
                 self.random_memories.append(s)
-        self.size = min(self.size + 1, self.max_size)
+
         self.index = (self.index + 1) % self.max_size
 
     def sample(self, batch_size):

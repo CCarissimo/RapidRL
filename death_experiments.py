@@ -49,13 +49,17 @@ EPISODE_TIMEOUT = 10000
 GAMMA = 0.2
 ALPHA = 0.1
 BATCH_SIZE = 10
-size_stories_list = [10]  # np.linspace(0, 100, 31).astype(int)
+size_stories_list = [1]  # [0, 1, 2, 5, 7, 15] np.linspace(0, 15, 7).astype(int)
 buffer_size = 1000  # np.linspace(100, MAX_STEPS, 31).astype(int)
 REPETITIONS = 1
+reset_q_table = True
+reset_visits = True
+reset_buffer_type = None
+initial_value = "random"
 
 cwd = os.getcwd()
 FOLDER = "%s" % cwd
-FILE_SIG = f"death_experiment_shareDeath_rep({REPETITIONS})_n({MAX_STEPS})_buffer({buffer_size})"
+FILE_SIG = f"death_experiment_shareDeath_rep{REPETITIONS}_n{MAX_STEPS}_buffer{buffer_size}"
 print(FILE_SIG)
 
 grid = np.zeros((15, 15))
@@ -76,63 +80,78 @@ master = []
 storage = {}
 
 for size_stories in size_stories_list:
-    tmp = {}
-    visits = []
-    n_tables = []
-    for initial_value in ["random", 0, 1]:
-        for iteration in range(REPETITIONS):
-            env = Environments.Gridworld(grid, terminal_state, initial_state, blacked_state)
-            states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
-            env_shape = (env.grid_height, env.grid_width)
 
-            agent = Agents.SimpleNoveltor(ALPHA=ALPHA, GAMMA=GAMMA, initial_value=initial_value)
-            rb = Agents.ReplayMemory(max_size=buffer_size, len_death_memories=size_stories)
+    for reset_buffer_type in ["death", "random", "both"]:
 
-            metrics, trajectory_metrics = Experiments.online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb,
-                                                                      env, states, env_shape)
+        for reset_q_table in [True, False]:
 
-            trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
-            lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
+            for reset_visits in [True, False]:
 
-            # store final visits and n_tables
-            visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
-            n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+                tmp = {}
+                visits = []
+                n_tables = []
+                lifetime_and_reward = []
 
-            # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
-            visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
-                                   for s in states] for n in range(len(trajectory_metrics) - 1)]
+                for iteration in range(REPETITIONS):
+                    env = Environments.Gridworld(grid, terminal_state, initial_state, blacked_state)
+                    states = [(i, j) for i in range(env.grid_height) for j in range(env.grid_width)]
+                    env_shape = (env.grid_height, env.grid_width)
 
-            n_table_differences = [[(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
-                                    for s in states] for n in range(len(trajectory_metrics) - 1)]
+                    agent = Agents.SimpleNoveltor(ALPHA=ALPHA, GAMMA=GAMMA, initial_value=initial_value)
+                    rb = Agents.ReplayMemory(max_size=buffer_size, len_death_memories=size_stories)
 
-            abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
-                                       for s in states] for n in range(len(trajectory_metrics) - 1)]
+                    metrics, trajectory_metrics = Experiments.online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb,
+                                                                              env, states, env_shape,
+                                                                              reset_q_table=reset_q_table,
+                                                                              reset_visits=reset_visits,
+                                                                              reset_buffer_type=reset_buffer_type)
 
-            abs_n_table_differences = [
-                [np.abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
-                 for s in states] for n in range(len(trajectory_metrics) - 1)]
+                    trajectory_length_per_step = [metrics[t]["traj_len"] for t in range(MAX_STEPS)]
+                    lifetime_per_agent = [trajectory_metrics[t]["lifetime"] for t in range(len(trajectory_metrics))]
+                    reward_per_agent = [trajectory_metrics[t]["reward"] for t in range(len(trajectory_metrics))]
+                    metrics_per_agent = list(zip([range(len(trajectory_metrics)), lifetime_per_agent, reward_per_agent]))
 
-            # print(n_table_differences)
+                    # store final visits and n_tables
+                    visits.append([[trajectory_metrics[n]['visits'][s] for s in states] for n in range(len(trajectory_metrics))])
+                    n_tables.append([[trajectory_metrics[n]['n_table'][s] for s in states] for n in range(len(trajectory_metrics))])
+                    lifetime_and_reward.append(metrics_per_agent)
 
-            results = {
-                "buffer_size": buffer_size,
-                "size_stories": size_stories,
-                "repetition": iteration,
-                "number_of_deaths": len(trajectory_metrics),
-                "lifetime_average": np.mean(lifetime_per_agent),
-                "lifetime_variance": np.var(lifetime_per_agent),
-                "visits_differences_mean": np.mean(visits_differences),
-                "abs_visits_differences_mean": np.mean(abs_visits_differences),
-                "visits_differences_var": np.var(visits_differences),
-                "n_table_differences_mean": np.mean(n_table_differences),
-                "abs_n_table_differences_mean": np.mean(abs_n_table_differences),
-                "n_table_differences_var": np.var(n_table_differences),
-            }
-            master.append(results)
+                    # intergenerational differences of visits (states been) and n-table (q-learning of novelties)
+                    visits_differences = [[trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s]
+                                           for s in states] for n in range(len(trajectory_metrics) - 1)]
 
-            tmp = {"visits": visits, "n_tables": n_tables}
-            with open(f"tables_storage_stories({size_stories})_initial({initial_value})", "wb") as file:
-                pickle.dump(tmp, file)
+                    n_table_differences = [[(trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s]).mean()
+                                            for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+                    abs_visits_differences = [[abs(trajectory_metrics[n + 1]['visits'][s] - trajectory_metrics[n]['visits'][s])
+                                               for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+                    abs_n_table_differences = [
+                        [np.abs((trajectory_metrics[n + 1]['n_table'][s] - trajectory_metrics[n]['n_table'][s])).mean()
+                         for s in states] for n in range(len(trajectory_metrics) - 1)]
+
+                    results = {
+                        "buffer_size": buffer_size,
+                        "size_stories": size_stories,
+                        "reset_buffer_type": reset_buffer_type,
+                        "reset_q_table": reset_q_table,
+                        "reset_visits": reset_visits,
+                        "repetition": iteration,
+                        "number_of_deaths": len(trajectory_metrics),
+                        "lifetime_average": np.mean(lifetime_per_agent),
+                        "lifetime_variance": np.var(lifetime_per_agent),
+                        "visits_differences_mean": np.mean(visits_differences),
+                        "abs_visits_differences_mean": np.mean(abs_visits_differences),
+                        "visits_differences_var": np.var(visits_differences),
+                        "n_table_differences_mean": np.mean(n_table_differences),
+                        "abs_n_table_differences_mean": np.mean(abs_n_table_differences),
+                        "n_table_differences_var": np.var(n_table_differences),
+                    }
+                    master.append(results)
+
+                tmp = {"visits": visits, "n_tables": n_tables, "metrics": lifetime_and_reward}
+                with open(f"tables_storage_stories_size{size_stories}_resetQ{reset_q_table}_resetV{reset_visits}_resetB{reset_buffer_type}", "wb") as file:
+                    pickle.dump(tmp, file)
 
 
 final_df = pd.DataFrame(master)

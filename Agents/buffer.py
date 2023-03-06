@@ -24,7 +24,7 @@ class ReplayMemory:
                 ind = (self.index - i) % self.max_size
                 self.death_memories.append(self.buffer[ind])
             # save some random memories
-            S = self.sample(min(self.size, self.len_random_memories))
+            S = self.sample(min(self.size, 1+self.len_random_memories))
             for s in S:
                 self.random_memories.append(s)
 

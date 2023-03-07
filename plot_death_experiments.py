@@ -41,7 +41,7 @@ def plot_case(buffer, table, visits, quantity, label):
                      alpha=0.2)
 
 
-reset_q_table = False
+reset_q_table = True
 reset_visits = True
 
 import seaborn as sns

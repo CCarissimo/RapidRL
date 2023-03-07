@@ -8,7 +8,7 @@ with open("storage/merged_storage", "rb") as file:
 max_steps = 10000
 granularity = 101
 repetitions = 10
-size_stories = 1
+size_stories = 15
 reset_q_table = True
 reset_visits = True
 reset_buffer_type = "random"
@@ -35,10 +35,14 @@ plt.figure(0)
 plt.plot(np.linspace(0, max_steps, granularity), lifetimes_mean)
 plt.fill_between(np.linspace(0, max_steps, granularity), lifetimes_mean + lifetimes_std, lifetimes_mean - lifetimes_std, alpha=0.2)
 plt.ylabel("Average Lifetime")
+plt.title(f"sizeStories {size_stories} resetQ {reset_q_table}, resetV {reset_visits}, resetB {reset_buffer_type}")
+plt.savefig(f"sizeStories{size_stories}_lifetime_resetQ{reset_q_table}_resetV{reset_visits}_resetB{reset_buffer_type}.pdf")
 
 plt.figure(1)
 plt.plot(np.linspace(0, max_steps, granularity), rewards_mean)
 plt.fill_between(np.linspace(0, max_steps, granularity), rewards_mean + rewards_std, rewards_mean - rewards_std, alpha=0.2)
 plt.ylabel("Cumulative Reward")
+plt.title(f"sizeStories {size_stories} resetQ {reset_q_table}, resetV {reset_visits}, resetB {reset_buffer_type}")
+plt.savefig(f"sizeStories{size_stories}_reward_resetQ{reset_q_table}_resetV{reset_visits}_resetB{reset_buffer_type}.pdf")
 
 plt.show()

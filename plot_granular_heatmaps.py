@@ -11,7 +11,7 @@ repetitions = 10
 size_stories = 7
 reset_q_table = True
 reset_visits = True
-reset_buffer_type = "random"
+reset_buffer_type = "both"
 
 data = data[(size_stories, reset_q_table, reset_visits, reset_buffer_type)]
 
@@ -21,9 +21,9 @@ for i in range(repetitions):
     tmp = np.zeros((len(data[i]), 15, 15))
     for j in range(len(data[i])):
         tmp[j] = np.array(data[i][j]).reshape(15, 15)
-    master[i, 0] = tmp[0:1].sum(axis=0)
-    master[i, 1] = tmp[0:int(len(data[i])/2)].sum(axis=0)
-    master[i, 2] = tmp.sum(axis=0)
+    master[i, 0] = tmp[0]  #.sum(axis=0)
+    master[i, 1] = tmp[int(len(data[i])/2)] #.sum(axis=0)
+    master[i, 2] = tmp[-1] #.sum(axis=0)
 
 mean = master.mean(axis=0)
 

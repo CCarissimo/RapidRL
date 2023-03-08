@@ -142,7 +142,7 @@ AGENTS = {
     }
 
 agent = AGENTS[AGENT_TYPE](ALPHA=ALPHA, GAMMA=GAMMA, initial_value="random")
-rb = ReplayMemory(max_size=BUFFER_SIZE, len_death_memories=2)
+rb = ReplayMemory(max_size=BUFFER_SIZE, len_death_memories=7)
 
 trajectory = []
 trajectories = []
@@ -154,7 +154,10 @@ step = 0
 # MAIN TRAINING and EVALUATION LOOP
 
 metrics, trajectory_metrics = online_learning(MAX_STEPS, BATCH_SIZE, EPISODE_TIMEOUT, agent, rb, env,
-                                              states, env_shape)
+                                              states, env_shape,
+                                              reset_q_table=True,
+                                              reset_visits=True,
+                                              reset_buffer_type="death")
 
 with open("n_values", "wb") as file:
     pickle.dump([metrics[i]['V'] for i in range(len(metrics))], file)
